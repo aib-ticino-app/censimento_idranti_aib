@@ -12,7 +12,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'AIB - Censimento Idranti',
+      title: 'Idranti AIB',
       debugShowCheckedModeBanner: false,
       locale: const Locale('it', 'IT'),
       theme: ThemeData(
@@ -55,7 +55,7 @@ class _HomePageState extends State<HomePage> {
   List<PuntoIdrico> listaIdranti = [
     PuntoIdrico(
       id: '1',
-      codice: 'IDR-01',
+      codice: 'IDR-S-01',
       tipo: 'Idrante Soprasuolo',
       ubicazione: 'Via Parco Ticino 12',
       stato: 'Funzionante',
@@ -75,7 +75,7 @@ class _HomePageState extends State<HomePage> {
     ),
     PuntoIdrico(
       id: '3',
-      codice: 'IDR-02',
+      codice: 'IDR-U-01',
       tipo: 'Idrante Sottosuolo',
       ubicazione: 'Via Centrale / Ang. Via Roma',
       stato: 'Non Funzionante',
@@ -109,6 +109,25 @@ class _HomePageState extends State<HomePage> {
     _lngController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  // Generatore automatico della sigla progressiva in base al tipo
+  String _generaCodiceProgressivo(String tipo) {
+    String prefisso = 'IDR';
+    if (tipo == 'Idrante Soprasuolo') {
+      prefisso = 'IDR-S';
+    } else if (tipo == 'Idrante Sottosuolo') {
+      prefisso = 'IDR-U';
+    } else if (tipo == 'Vasca AIB di Riserva') {
+      prefisso = 'VAS';
+    } else if (tipo == 'Presa d\'Acqua Naturale') {
+      prefisso = 'PRE';
+    }
+
+    int conteggio = listaIdranti.where((item) => item.tipo == tipo).length + 1;
+    String numeroFormattato = conteggio.toString().padLeft(2, '0');
+
+    return '$prefisso-$numeroFormattato';
   }
 
   void _simulaSpostamentoGPS() {
@@ -346,6 +365,9 @@ class _HomePageState extends State<HomePage> {
     _lngController.text = posizioneCorrenteLng.toStringAsFixed(4);
     String tipoSelezionato = tipologieDisponibili.first;
     String statoSelezionato = 'Funzionante';
+    
+    _codiceController.text = _generaCodiceProgressivo(tipoSelezionato);
+
     Map<String, bool> mezziSelezionati = {
       for (var m in mezziDisponibili) m: false
     };
@@ -360,14 +382,6 @@ class _HomePageState extends State<HomePage> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                TextField(
-                  controller: _codiceController,
-                  decoration: const InputDecoration(
-                    labelText: 'Codice / Sigla Idrante',
-                    hintText: 'es. IDR-05',
-                  ),
-                ),
-                const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
                   value: tipoSelezionato,
                   decoration: const InputDecoration(labelText: 'Tipologia'),
@@ -379,9 +393,20 @@ class _HomePageState extends State<HomePage> {
                   }).toList(),
                   onChanged: (valore) {
                     if (valore != null) {
-                      setDialogState(() => tipoSelezionato = valore);
+                      setDialogState(() {
+                        tipoSelezionato = valore;
+                        _codiceController.text = _generaCodiceProgressivo(tipoSelezionato);
+                      });
                     }
                   },
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _codiceController,
+                  decoration: const InputDecoration(
+                    labelText: 'Codice / Sigla Progressiva',
+                    hintText: 'Generato automaticamente',
+                  ),
                 ),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
@@ -504,9 +529,33 @@ class _HomePageState extends State<HomePage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Mappatura & Navigatore AIB'),
         backgroundColor: Colors.blue[800],
         foregroundColor: Colors.white,
+        title: Row(
+          children: [
+            // Logo Locale da Assets
+            Container(
+              padding: const EdgeInsets.all(2),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Image.asset(
+                'assets/logo.png',
+                height: 32,
+                width: 32,
+                errorBuilder: (context, error, stackTrace) =>
+                    Image.asset('assets/images/logo.png', height: 32, width: 32,
+                    errorBuilder: (c, e, s) => const Icon(Icons.shield, color: Colors.blue, size: 28)),
+              ),
+            ),
+            const SizedBox(width: 10),
+            const Text(
+              'Idranti AIB',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            ),
+          ],
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.my_location),
@@ -528,10 +577,10 @@ class _HomePageState extends State<HomePage> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text(
-                    'Censimento Punti Idrici AIB',
+                    'Parco Ticino - Volontari AIB',
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 16,
+                      fontSize: 15,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
