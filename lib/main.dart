@@ -35,6 +35,9 @@ class _HomePageState extends State<HomePage> {
   // Password predefinita per l'eliminazione
   final String _passwordEliminazione = 'Ticino-2026';
 
+  // Stato per il filtro di visualizzazione selezionato: 'Tutti', 'Idranti', 'Vasche', 'Prese d'Acqua'
+  String _filtroSelezionato = 'Tutti';
+
   // Coordinate simulate della squadra AIB (Parco del Ticino)
   double posizioneCorrenteLat = 45.6512;
   double posizioneCorrenteLng = 8.7123;
@@ -151,16 +154,29 @@ class _HomePageState extends State<HomePage> {
     return 12742 * asin(sqrt(a));
   }
 
-  List<PuntoIdrico> get _idrantiPiuVicini {
-    List<PuntoIdrico> listaOrdinata = List.from(listaIdranti);
-    listaOrdinata.sort((a, b) {
+  List<PuntoIdrico> get _idrantiFiltratiEVicini {
+    // Applicazione del filtro selezionato dall'utente
+    List<PuntoIdrico> listaFiltrata = listaIdranti.where((item) {
+      if (_filtroSelezionato == 'Idranti') {
+        return item.tipo.contains('Idrante');
+      } else if (_filtroSelezionato == 'Vasche') {
+        return item.tipo.contains('Vasca');
+      } else if (_filtroSelezionato == 'Prese d\'Acqua') {
+        return item.tipo.contains('Presa');
+      }
+      return true; // Per 'Tutti'
+    }).toList();
+
+    // Ordinamento per distanza dalla squadra GPS
+    listaFiltrata.sort((a, b) {
       double distA = _calcolaDistanzaKm(
           posizioneCorrenteLat, posizioneCorrenteLng, a.latitudine, a.longitudine);
       double distB = _calcolaDistanzaKm(
           posizioneCorrenteLat, posizioneCorrenteLng, b.latitudine, b.longitudine);
       return distA.compareTo(distB);
     });
-    return listaOrdinata;
+
+    return listaFiltrata;
   }
 
   Color _getColoreStato(String stato) {
@@ -522,9 +538,35 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  Widget _buildFilterChip(String etichetta) {
+    bool isSelected = _filtroSelezionato == etichetta;
+    return Padding(
+      padding: const EdgeInsets.only(right: 6.0),
+      child: FilterChip(
+        label: Text(
+          etichetta,
+          style: TextStyle(
+            color: isSelected ? Colors.white : Colors.black87,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            fontSize: 12,
+          ),
+        ),
+        selected: isSelected,
+        selectedColor: Colors.blue[800],
+        backgroundColor: Colors.grey[200],
+        checkmarkColor: Colors.white,
+        onSelected: (bool selected) {
+          setState(() {
+            _filtroSelezionato = etichetta;
+          });
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final idrantiVicini = _idrantiPiuVicini;
+    final idrantiMostrati = _idrantiFiltratiEVicini;
 
     return Scaffold(
       appBar: AppBar(
@@ -532,7 +574,6 @@ class _HomePageState extends State<HomePage> {
         foregroundColor: Colors.white,
         title: Row(
           children: [
-            // Caricamento dello Stemma Reale Parco Ticino dal repository GitHub
             Container(
               padding: const EdgeInsets.all(2),
               decoration: BoxDecoration(
@@ -612,159 +653,186 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
             const SizedBox(height: 8),
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: idrantiVicini.length,
-              itemBuilder: (ctx, index) {
-                final idrante = idrantiVicini[index];
-                double dist = _calcolaDistanzaKm(
-                  posizioneCorrenteLat,
-                  posizioneCorrenteLng,
-                  idrante.latitudine,
-                  idrante.longitudine,
-                );
 
-                bool isGuasto = idrante.stato == 'Non Funzionante';
+            // Barra dei Filtri Selezionabili
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Row(
+                children: [
+                  _buildFilterChip('Tutti'),
+                  _buildFilterChip('Idranti'),
+                  _buildFilterChip('Vasche'),
+                  _buildFilterChip('Prese d\'Acqua'),
+                ],
+              ),
+            ),
 
-                return Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                  elevation: 2,
-                  color: isGuasto ? Colors.red[50] : Colors.white,
-                  child: InkWell(
-                    onTap: () => _mostraDettaglioIdrante(idrante, dist),
-                    child: Padding(
-                      padding: const EdgeInsets.all(10.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              CircleAvatar(
-                                backgroundColor: isGuasto
-                                    ? Colors.red[100]
-                                    : (idrante.stato == 'Da Verificare' ? Colors.orange[100] : Colors.blue[100]),
-                                child: Icon(
-                                  isGuasto
-                                      ? Icons.warning_amber_rounded
-                                      : (idrante.tipo.contains('Vasca') || idrante.tipo.contains('Presa')
-                                          ? Icons.waves
-                                          : Icons.water_drop),
-                                  color: isGuasto
-                                      ? Colors.red[800]
-                                      : (idrante.stato == 'Da Verificare' ? Colors.orange[900] : Colors.blue[800]),
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Column(
+            const SizedBox(height: 8),
+            
+            idrantiMostrati.isEmpty
+                ? const Padding(
+                    padding: EdgeInsets.all(32.0),
+                    child: Center(
+                      child: Text(
+                        'Nessun punto idrico trovato per questa categoria.',
+                        style: TextStyle(color: Colors.grey, fontSize: 13),
+                      ),
+                    ),
+                  )
+                : ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: idrantiMostrati.length,
+                    itemBuilder: (ctx, index) {
+                      final idrante = idrantiMostrati[index];
+                      double dist = _calcolaDistanzaKm(
+                        posizioneCorrenteLat,
+                        posizioneCorrenteLng,
+                        idrante.latitudine,
+                        idrante.longitudine,
+                      );
+
+                      bool isGuasto = idrante.stato == 'Non Funzionante';
+
+                      return Card(
+                        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                        elevation: 2,
+                        color: isGuasto ? Colors.red[50] : Colors.white,
+                        child: InkWell(
+                          onTap: () => _mostraDettaglioIdrante(idrante, dist),
+                          child: Padding(
+                            padding: const EdgeInsets.all(10.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Row(
-                                      children: [
-                                        Text(
-                                          '${idrante.codice} - ${idrante.tipo}',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 14,
-                                            color: isGuasto ? Colors.red[900] : Colors.black,
+                                    CircleAvatar(
+                                      backgroundColor: isGuasto
+                                          ? Colors.red[100]
+                                          : (idrante.stato == 'Da Verificare' ? Colors.orange[100] : Colors.blue[100]),
+                                      child: Icon(
+                                        isGuasto
+                                            ? Icons.warning_amber_rounded
+                                            : (idrante.tipo.contains('Vasca') || idrante.tipo.contains('Presa')
+                                                ? Icons.waves
+                                                : Icons.water_drop),
+                                        color: isGuasto
+                                            ? Colors.red[800]
+                                            : (idrante.stato == 'Da Verificare' ? Colors.orange[900] : Colors.blue[800]),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Text(
+                                                '${idrante.codice} - ${idrante.tipo}',
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 14,
+                                                  color: isGuasto ? Colors.red[900] : Colors.black,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                decoration: BoxDecoration(
+                                                  color: _getColoreStato(idrante.stato),
+                                                  borderRadius: BorderRadius.circular(4),
+                                                ),
+                                                child: Text(
+                                                  idrante.stato,
+                                                  style: const TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
                                           ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                          decoration: BoxDecoration(
-                                            color: _getColoreStato(idrante.stato),
-                                            borderRadius: BorderRadius.circular(4),
-                                          ),
-                                          child: Text(
-                                            idrante.stato,
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 10,
+                                          const SizedBox(height: 4),
+                                          Text('Ubicazione: ${idrante.ubicazione}', style: const TextStyle(fontSize: 12)),
+                                          Text(
+                                            'Distanza: ${dist.toStringAsFixed(2)} km',
+                                            style: TextStyle(
+                                              fontSize: 11,
                                               fontWeight: FontWeight.bold,
+                                              color: isGuasto ? Colors.red[700] : Colors.blueGrey,
                                             ),
                                           ),
+                                          if (idrante.mezziCompatibili.isNotEmpty) ...[
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              'Mezzi: ${idrante.mezziCompatibili.join(', ')}',
+                                              style: TextStyle(fontSize: 11, color: Colors.blueGrey[800], fontWeight: FontWeight.w500),
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const Divider(height: 12),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    PopupMenuButton<String>(
+                                      icon: const Icon(Icons.build_circle, color: Colors.blueGrey),
+                                      tooltip: 'Cambia Stato',
+                                      onSelected: (String nuovoStato) {
+                                        _cambiaStatoIdrante(idrante, nuovoStato);
+                                      },
+                                      itemBuilder: (BuildContext context) => [
+                                        const PopupMenuItem(
+                                          value: 'Funzionante',
+                                          child: Text('Segna come: Funzionante', style: TextStyle(color: Colors.green)),
+                                        ),
+                                        const PopupMenuItem(
+                                          value: 'Non Funzionante',
+                                          child: Text('Segna come: Non Funzionante', style: TextStyle(color: Colors.red)),
+                                        ),
+                                        const PopupMenuItem(
+                                          value: 'Da Verificare',
+                                          child: Text('Segna come: Da Verificare', style: TextStyle(color: Colors.orange)),
                                         ),
                                       ],
                                     ),
-                                    const SizedBox(height: 4),
-                                    Text('Ubicazione: ${idrante.ubicazione}', style: const TextStyle(fontSize: 12)),
-                                    Text(
-                                      'Distanza: ${dist.toStringAsFixed(2)} km',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold,
-                                        color: isGuasto ? Colors.red[700] : Colors.blueGrey,
+                                    IconButton(
+                                      icon: const Icon(Icons.delete_outline, color: Colors.red),
+                                      tooltip: 'Elimina Idrante (Richiede Password)',
+                                      onPressed: () => _confermaEliminazioneIdrante(idrante),
+                                    ),
+                                    const Spacer(),
+                                    IconButton(
+                                      icon: const Icon(Icons.info_outline, color: Colors.blue),
+                                      tooltip: 'Vedi Dettaglio',
+                                      onPressed: () => _mostraDettaglioIdrante(idrante, dist),
+                                    ),
+                                    ElevatedButton.icon(
+                                      onPressed: () => _avviaNavigatoreReale(idrante.latitudine, idrante.longitudine),
+                                      icon: const Icon(Icons.navigation, size: 14, color: Colors.white),
+                                      label: const Text('Naviga', style: TextStyle(fontSize: 11, color: Colors.white)),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: isGuasto ? Colors.grey[700] : Colors.green[700],
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                       ),
                                     ),
-                                    if (idrante.mezziCompatibili.isNotEmpty) ...[
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        'Mezzi: ${idrante.mezziCompatibili.join(', ')}',
-                                        style: TextStyle(fontSize: 11, color: Colors.blueGrey[800], fontWeight: FontWeight.w500),
-                                      ),
-                                    ],
                                   ],
-                                ),
-                              ),
-                            ],
+                                )
+                              ],
+                            ),
                           ),
-                          const Divider(height: 12),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              PopupMenuButton<String>(
-                                icon: const Icon(Icons.build_circle, color: Colors.blueGrey),
-                                tooltip: 'Cambia Stato',
-                                onSelected: (String nuovoStato) {
-                                  _cambiaStatoIdrante(idrante, nuovoStato);
-                                },
-                                itemBuilder: (BuildContext context) => [
-                                  const PopupMenuItem(
-                                    value: 'Funzionante',
-                                    child: Text('Segna come: Funzionante', style: TextStyle(color: Colors.green)),
-                                  ),
-                                  const PopupMenuItem(
-                                    value: 'Non Funzionante',
-                                    child: Text('Segna come: Non Funzionante', style: TextStyle(color: Colors.red)),
-                                  ),
-                                  const PopupMenuItem(
-                                    value: 'Da Verificare',
-                                    child: Text('Segna come: Da Verificare', style: TextStyle(color: Colors.orange)),
-                                  ),
-                                ],
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.delete_outline, color: Colors.red),
-                                tooltip: 'Elimina Idrante (Richiede Password)',
-                                onPressed: () => _confermaEliminazioneIdrante(idrante),
-                              ),
-                              const Spacer(),
-                              IconButton(
-                                icon: const Icon(Icons.info_outline, color: Colors.blue),
-                                tooltip: 'Vedi Dettaglio',
-                                onPressed: () => _mostraDettaglioIdrante(idrante, dist),
-                              ),
-                              ElevatedButton.icon(
-                                onPressed: () => _avviaNavigatoreReale(idrante.latitudine, idrante.longitudine),
-                                icon: const Icon(Icons.navigation, size: 14, color: Colors.white),
-                                label: const Text('Naviga', style: TextStyle(fontSize: 11, color: Colors.white)),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: isGuasto ? Colors.grey[700] : Colors.green[700],
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                ),
-                              ),
-                            ],
-                          )
-                        ],
-                      ),
-                    ),
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
             const SizedBox(height: 20),
           ],
         ),
