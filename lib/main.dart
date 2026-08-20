@@ -533,7 +533,7 @@ class _HomePageState extends State<HomePage> {
         foregroundColor: Colors.white,
         title: Row(
           children: [
-            // Logo Locale da Assets
+            // Logo con Caricamento Multi-Sorgente
             Container(
               padding: const EdgeInsets.all(2),
               decoration: BoxDecoration(
@@ -544,9 +544,20 @@ class _HomePageState extends State<HomePage> {
                 'assets/logo.png',
                 height: 32,
                 width: 32,
-                errorBuilder: (context, error, stackTrace) =>
-                    Image.asset('assets/images/logo.png', height: 32, width: 32,
-                    errorBuilder: (c, e, s) => const Icon(Icons.shield, color: Colors.blue, size: 28)),
+                errorBuilder: (context, error, stackTrace) {
+                  return Image.network(
+                    'https://raw.githubusercontent.com/spagnolocorrado-spec/censimento_idranti_aib/main/assets/logo.png',
+                    height: 32,
+                    width: 32,
+                    errorBuilder: (c, e, s) => Image.network(
+                      'https://raw.githubusercontent.com/spagnolocorrado-spec/censimento_idranti_aib/main/logo.png',
+                      height: 32,
+                      width: 32,
+                      errorBuilder: (c2, e2, s2) =>
+                          const Icon(Icons.shield, color: Colors.blue, size: 28),
+                    ),
+                  );
+                },
               ),
             ),
             const SizedBox(width: 10),
