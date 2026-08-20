@@ -32,6 +32,9 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  // Password predefinita per l'eliminazione
+  final String _passwordEliminazione = 'Ticino-2026';
+
   // Coordinate simulate della squadra AIB (Parco del Ticino)
   double posizioneCorrenteLat = 45.6512;
   double posizioneCorrenteLng = 8.7123;
@@ -96,6 +99,7 @@ class _HomePageState extends State<HomePage> {
   final _ubicazioneController = TextEditingController();
   final _latController = TextEditingController();
   final _lngController = TextEditingController();
+  final _passwordController = TextEditingController();
 
   @override
   void dispose() {
@@ -103,6 +107,7 @@ class _HomePageState extends State<HomePage> {
     _ubicazioneController.dispose();
     _latController.dispose();
     _lngController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
@@ -189,11 +194,34 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _confermaEliminazioneIdrante(PuntoIdrico idrante) {
+    _passwordController.clear();
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Elimina Idrante'),
-        content: Text('Sei sicuro di voler eliminare l\'idrante ${idrante.codice}? L\'azione non può essere annullata.'),
+        title: Row(
+          children: const [
+            Icon(Icons.security, color: Colors.red),
+            SizedBox(width: 8),
+            Text('Protezione Eliminazione'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Per eliminare l\'idrante ${idrante.codice}, inserisci la password della squadra:'),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _passwordController,
+              obscureText: true,
+              decoration: const InputDecoration(
+                labelText: 'Password',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.lock),
+              ),
+            ),
+          ],
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
@@ -201,19 +229,28 @@ class _HomePageState extends State<HomePage> {
           ),
           ElevatedButton(
             onPressed: () {
-              setState(() {
-                listaIdranti.removeWhere((item) => item.id == idrante.id);
-              });
-              Navigator.of(ctx).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Idrante ${idrante.codice} eliminato.'),
-                  backgroundColor: Colors.orange[800],
-                ),
-              );
+              if (_passwordController.text == _passwordEliminazione) {
+                setState(() {
+                  listaIdranti.removeWhere((item) => item.id == idrante.id);
+                });
+                Navigator.of(ctx).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Idrante ${idrante.codice} eliminato con successo.'),
+                    backgroundColor: Colors.orange[800],
+                  ),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Password errata! Eliminazione annullata.'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Elimina', style: TextStyle(color: Colors.white)),
+            child: const Text('Conferma Eliminazione', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -653,7 +690,7 @@ class _HomePageState extends State<HomePage> {
                               ),
                               IconButton(
                                 icon: const Icon(Icons.delete_outline, color: Colors.red),
-                                tooltip: 'Elimina Idrante',
+                                tooltip: 'Elimina Idrante (Richiede Password)',
                                 onPressed: () => _confermaEliminazioneIdrante(idrante),
                               ),
                               const Spacer(),
