@@ -163,6 +163,65 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  // Conversione da coordinate decimali a WGS84 (Gradi, Minuti, Secondi)
+  String _convertiInWGS84GMS(double coordinate, bool isLat) {
+    int gradi = coordinate.abs().floor();
+    double minutiDecimali = (coordinate.abs() - gradi) * 60;
+    int minuti = minutiDecimali.floor();
+    double secondi = (minutiDecimali - minuti) * 60;
+
+    String direzione;
+    if (isLat) {
+      direzione = coordinate >= 0 ? 'N' : 'S';
+    } else {
+      direzione = coordinate >= 0 ? 'E' : 'W';
+    }
+
+    String gradiStr = gradi.toString().padLeft(isLat ? 2 : 3, '0');
+    String minutiStr = minuti.toString().padLeft(2, '0');
+    String secondiStr = secondi.toStringAsFixed(1).padLeft(4, '0');
+
+    return '$gradiStr° $minutiStr\' $secondiStr" $direzione';
+  }
+
+  // Funzione di Condivisione dei dati del Punto Idrico
+  void _condividiPuntoIdrico(PuntoIdrico idrante) {
+    String latGMS = _convertiInWGS84GMS(idrante.latitudine, true);
+    String lngGMS = _convertiInWGS84GMS(idrante.longitudine, false);
+
+    List<String> attacchi = [];
+    if (idrante.hasUni45) attacchi.add('UNI 45');
+    if (idrante.hasUni70) attacchi.add('UNI 70');
+    String attacchiStr = attacchi.isNotEmpty ? attacchi.join(', ') : 'Nessuno';
+
+    String testoCondivisione = '''
+🚨 *PUNTO IDRICO AIB*
+📌 *Codice:* ${idrante.codice} (${idrante.tipo})
+📍 *Ubicazione:* ${idrante.ubicazione}
+🟢 *Stato:* ${idrante.stato}
+⚙️ *Attacchi:* $attacchiStr
+
+🌐 *WGS84 (GMS):*
+$latGMS - $lngGMS
+
+🧭 *Decimali:*
+${idrante.latitudine.toStringAsFixed(6)}, ${idrante.longitudine.toStringAsFixed(6)}
+
+🗺️ *Mappa:*
+https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.longitudine}
+''';
+
+    try {
+      html.window.navigator.share({
+        'title': 'Punto Idrico ${idrante.codice}',
+        'text': testoCondivisione,
+      });
+    } catch (e) {
+      html.window.navigator.clipboard?.writeText(testoCondivisione);
+      _mostraMessaggio('Dati del punto idrico copiati negli appunti!');
+    }
+  }
+
   String _generaCodiceProgressivo(String tipo) {
     String prefisso = 'IDR';
     if (tipo == 'Idrante Soprasuolo') {
@@ -224,7 +283,6 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  // Costruttore dinamico dell'icona (Opzione B per la Vasca AIB)
   Widget _buildIconaSimbolo(String tipo, {double size = 22, Color? overrideColor}) {
     if (tipo.contains('Vasca')) {
       return IconaVascaAIB(size: size);
@@ -312,6 +370,9 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _mostraDettaglioIdrante(PuntoIdrico idrante, double distanzaKm) {
+    String latGMS = _convertiInWGS84GMS(idrante.latitudine, true);
+    String lngGMS = _convertiInWGS84GMS(idrante.longitudine, false);
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -349,8 +410,12 @@ class _HomePageState extends State<HomePage> {
             const SizedBox(height: 6),
             Text('Distanza dalla squadra: ${distanzaKm.toStringAsFixed(2)} km',
                 style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
-            const SizedBox(height: 6),
-            Text('Coordinate GPS: ${idrante.latitudine}, ${idrante.longitudine}'),
+            const Divider(height: 16),
+            const Text('Coordinate GPS:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+            const SizedBox(height: 2),
+            Text('WGS84 (GMS): $latGMS - $lngGMS', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+            Text('Decimali: ${idrante.latitudine.toStringAsFixed(6)}, ${idrante.longitudine.toStringAsFixed(6)}',
+                style: const TextStyle(fontSize: 11, color: Colors.grey)),
             const Divider(height: 16),
             const Text('Attacchi / Diametri Disponibili:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
             const SizedBox(height: 4),
@@ -392,6 +457,11 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.share, color: Colors.green),
+            tooltip: 'Condividi Dati WGS84',
+            onPressed: () => _condividiPuntoIdrico(idrante),
+          ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
             child: const Text('Chiudi'),
@@ -402,7 +472,7 @@ class _HomePageState extends State<HomePage> {
               _avviaNavigatoreReale(idrante.latitudine, idrante.longitudine);
             },
             icon: const Icon(Icons.turn_right, color: Colors.white),
-            label: const Text('Avvia Navigatore'),
+            label: const Text('Naviga'),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.blue[700],
               foregroundColor: Colors.white,
@@ -968,6 +1038,11 @@ class _HomePageState extends State<HomePage> {
                                       icon: const Icon(Icons.delete_outline, color: Colors.red),
                                       tooltip: 'Elimina Idrante (Richiede Password)',
                                       onPressed: () => _confermaEliminazioneIdrante(idrante),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.share, color: Colors.green),
+                                      tooltip: 'Condividi WGS84',
+                                      onPressed: () => _condividiPuntoIdrico(idrante),
                                     ),
                                     const Spacer(),
                                     IconButton(
