@@ -37,8 +37,9 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  // URL Firebase Realtime Database
-  final String _firebaseUrl = 'https://idranti-aib-default-rtdb.europe-west1.firebasedatabase.app';
+  // DATI SUPABASE SQUADRA AIB
+  final String _supabaseUrl = 'https://srielrbjejggxvpeshfd.supabase.co';
+  final String _supabaseApiKey = 'sb_publishable_Uz96ih6QR0FVRzJyV3HjqA_RtpIOSN7';
 
   final String _passwordEliminazione = 'AIB2026';
   String _filtroSelezionato = 'Tutti';
@@ -75,7 +76,7 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _ottieniPosizioneGPSNativaWeb();
-    _caricaIdrantiDaFirebase();
+    _caricaIdrantiDaSupabase();
   }
 
   @override
@@ -88,93 +89,97 @@ class _HomePageState extends State<HomePage> {
     super.dispose();
   }
 
-  // --- CARICAMENTO DATI DA FIREBASE ---
-  Future<void> _caricaIdrantiDaFirebase() async {
+  Map<String, String> get _headers => {
+        'apikey': _supabaseApiKey,
+        'Authorization': 'Bearer $_supabaseApiKey',
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation',
+      };
+
+  // --- CARICAMENTO DATI DA SUPABASE ---
+  Future<void> _caricaIdrantiDaSupabase() async {
     setState(() => _caricamentoCloud = true);
     try {
-      final response = await http.get(Uri.parse('$_firebaseUrl/idranti.json'));
+      final response = await http.get(
+        Uri.parse('$_supabaseUrl/rest/v1/idranti?select=*'),
+        headers: _headers,
+      );
+
       if (response.statusCode == 200) {
-        if (response.body != 'null') {
-          final Map<String, dynamic> data = json.decode(response.body);
-          List<PuntoIdrico> caricati = [];
-          data.forEach((key, item) {
-            if (item is Map) {
-              caricati.add(PuntoIdrico.fromMap(key, Map<String, dynamic>.from(item)));
-            }
-          });
-          setState(() {
-            listaIdranti = caricati;
-          });
-          _mostraMessaggio('Dati sincronizzati con il Cloud!', isError: false);
-        } else {
-          setState(() {
-            listaIdranti = [];
-          });
-        }
+        final List<dynamic> data = json.decode(response.body);
+        setState(() {
+          listaIdranti = data.map((item) => PuntoIdrico.fromMap(item)).toList();
+        });
+        _mostraMessaggio('Dati aggiornati dal Cloud Supabase!');
       } else {
-        _mostraMessaggio('Errore ${response.statusCode}: Verifica le regole su Firebase.', isError: true);
+        _mostraMessaggio('Errore ${response.statusCode} durante il caricamento.', isError: true);
       }
     } catch (e) {
-      _mostraMessaggio('Impossibile connettersi a Firebase.', isError: true);
+      _mostraMessaggio('Errore di connessione a Supabase.', isError: true);
     } finally {
       setState(() => _caricamentoCloud = false);
     }
   }
 
-  // --- SALVATAGGIO NUOVO IDRANTE SU FIREBASE ---
-  Future<void> _salvaIdranteSuFirebase(PuntoIdrico idrante) async {
+  // --- SALVATAGGIO SU SUPABASE ---
+  Future<void> _salvaIdranteSuSupabase(PuntoIdrico idrante) async {
     setState(() => _caricamentoCloud = true);
     try {
       final response = await http.post(
-        Uri.parse('$_firebaseUrl/idranti.json'),
-        headers: {'Content-Type': 'application/json'},
+        Uri.parse('$_supabaseUrl/rest/v1/idranti'),
+        headers: _headers,
         body: json.encode(idrante.toMap()),
       );
 
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final Map<String, dynamic> data = json.decode(response.body);
-        idrante.id = data['name'] ?? DateTime.now().millisecondsSinceEpoch.toString();
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        if (data.isNotEmpty && data[0]['id'] != null) {
+          idrante.id = data[0]['id'].toString();
+        }
         setState(() {
           listaIdranti.add(idrante);
         });
-        _mostraMessaggio('Punto idrico salvato nel Cloud!', isError: false);
+        _mostraMessaggio('Punto idrico salvato in Supabase!');
       } else {
-        _mostraMessaggio('Errore ${response.statusCode} nel salvataggio su Firebase.', isError: true);
+        _mostraMessaggio('Errore ${response.statusCode}: Verifica la tabella idranti.', isError: true);
       }
     } catch (e) {
-      _mostraMessaggio('Errore di rete durante il salvataggio: $e', isError: true);
+      _mostraMessaggio('Impossibile salvare su Supabase: $e', isError: true);
     } finally {
       setState(() => _caricamentoCloud = false);
     }
   }
 
-  // --- AGGIORNAMENTO STATO SU FIREBASE ---
+  // --- AGGIORNAMENTO STATO SU SUPABASE ---
   Future<void> _cambiaStatoIdrante(PuntoIdrico idrante, String nuovoStato) async {
     setState(() {
       idrante.stato = nuovoStato;
     });
     try {
       await http.patch(
-        Uri.parse('$_firebaseUrl/idranti/${idrante.id}.json'),
-        headers: {'Content-Type': 'application/json'},
+        Uri.parse('$_supabaseUrl/rest/v1/idranti?id=eq.${idrante.id}'),
+        headers: _headers,
         body: json.encode({'stato': nuovoStato}),
       );
-      _mostraMessaggio('Stato aggiornato nel Cloud!', isError: false);
+      _mostraMessaggio('Stato aggiornato nel Cloud!');
     } catch (e) {
-      _mostraMessaggio('Errore aggiornamento Cloud.', isError: true);
+      _mostraMessaggio('Errore aggiornamento Supabase.', isError: true);
     }
   }
 
-  // --- ELIMINAZIONE DA FIREBASE ---
-  Future<void> _eliminaIdranteDaFirebase(PuntoIdrico idrante) async {
+  // --- ELIMINAZIONE DA SUPABASE ---
+  Future<void> _eliminaIdranteDaSupabase(PuntoIdrico idrante) async {
     try {
-      await http.delete(Uri.parse('$_firebaseUrl/idranti/${idrante.id}.json'));
+      await http.delete(
+        Uri.parse('$_supabaseUrl/rest/v1/idranti?id=eq.${idrante.id}'),
+        headers: _headers,
+      );
       setState(() {
         listaIdranti.removeWhere((item) => item.id == idrante.id);
       });
-      _mostraMessaggio('Punto idrico eliminato dal Cloud.', isError: false);
+      _mostraMessaggio('Punto idrico eliminato da Supabase.');
     } catch (e) {
-      _mostraMessaggio('Errore eliminazione Firebase.', isError: true);
+      _mostraMessaggio('Errore eliminazione Supabase.', isError: true);
     }
   }
 
@@ -204,7 +209,7 @@ class _HomePageState extends State<HomePage> {
       SnackBar(
         content: Text(testo),
         backgroundColor: isError ? Colors.red[800] : Colors.green[800],
-        duration: const Duration(seconds: 4),
+        duration: const Duration(seconds: 3),
       ),
     );
   }
@@ -334,7 +339,7 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
             onPressed: () {
               if (_passwordController.text == _passwordEliminazione) {
                 Navigator.of(ctx).pop();
-                _eliminaIdranteDaFirebase(idrante);
+                _eliminaIdranteDaSupabase(idrante);
               } else {
                 _mostraMessaggio('Password errata!', isError: true);
               }
@@ -478,7 +483,7 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
             ElevatedButton(
               onPressed: () {
                 if (_codiceController.text.isEmpty || _ubicazioneController.text.isEmpty) {
-                  _mostraMessaggio('Inserisci codice e ubicazione prima di salvare.', isError: true);
+                  _mostraMessaggio('Inserisci codice e ubicazione.', isError: true);
                   return;
                 }
 
@@ -498,10 +503,10 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
                 );
 
                 Navigator.of(ctx).pop();
-                _salvaIdranteSuFirebase(nuovo);
+                _salvaIdranteSuSupabase(nuovo);
               },
               style: ElevatedButton.styleFrom(backgroundColor: Colors.blue[700], foregroundColor: Colors.white),
-              child: const Text('Salva nel Cloud'),
+              child: const Text('Salva in Supabase'),
             ),
           ],
         ),
@@ -532,7 +537,7 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
         foregroundColor: Colors.white,
         title: const Text('Idranti AIB Cloud', style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
-          IconButton(icon: const Icon(Icons.refresh), onPressed: _caricaIdrantiDaFirebase, tooltip: 'Ricarica dal Cloud'),
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _caricaIdrantiDaSupabase, tooltip: 'Ricarica da Supabase'),
           IconButton(icon: const Icon(Icons.my_location), onPressed: _ottieniPosizioneGPSNativaWeb, tooltip: 'Aggiorna GPS'),
         ],
       ),
@@ -548,7 +553,7 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Parco Ticino - Cloud AIB', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  const Text('Parco Ticino - Supabase Cloud', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                   Text('GPS: ${posizioneCorrenteLat.toStringAsFixed(4)}, ${posizioneCorrenteLng.toStringAsFixed(4)}', style: const TextStyle(color: Colors.white70, fontSize: 11)),
                 ],
               ),
@@ -705,22 +710,25 @@ class PuntoIdrico {
       'stato': stato,
       'latitudine': latitudine,
       'longitudine': longitudine,
-      'mezziCompatibili': mezziCompatibili,
+      'mezziCompatibili': mezziCompatibili.join(','),
       'hasUni45': hasUni45,
       'hasUni70': hasUni70,
     };
   }
 
-  factory PuntoIdrico.fromMap(String id, Map<String, dynamic> map) {
+  factory PuntoIdrico.fromMap(Map<String, dynamic> map) {
+    String mezziRaw = map['mezziCompatibili']?.toString() ?? '';
+    List<String> mezzi = mezziRaw.isNotEmpty ? mezziRaw.split(',') : [];
+
     return PuntoIdrico(
-      id: id,
+      id: map['id']?.toString() ?? '',
       codice: map['codice']?.toString() ?? '',
       tipo: map['tipo']?.toString() ?? '',
       ubicazione: map['ubicazione']?.toString() ?? '',
       stato: map['stato']?.toString() ?? 'Funzionante',
       latitudine: map['latitudine'] != null ? (map['latitudine'] as num).toDouble() : 0.0,
       longitudine: map['longitudine'] != null ? (map['longitudine'] as num).toDouble() : 0.0,
-      mezziCompatibili: map['mezziCompatibili'] != null ? List<String>.from(map['mezziCompatibili']) : [],
+      mezziCompatibili: mezzi,
       hasUni45: map['hasUni45'] == true,
       hasUni70: map['hasUni70'] == true,
     );
