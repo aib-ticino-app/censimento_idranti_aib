@@ -37,7 +37,6 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  // DATI SUPABASE SQUADRA AIB
   final String _supabaseUrl = 'https://srielrbjejggxvpeshfd.supabase.co';
   final String _supabaseApiKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNyaWVscmJqZWpnZ3h2cGVzaGZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODczMjcwMzAsImV4cCI6MjEwMjkwMzAzMH0.3nX0meQZYEAIMEvuFSZVP0CTvgbTKES5bS5gDRDFa-c';
 
@@ -96,7 +95,6 @@ class _HomePageState extends State<HomePage> {
         'Prefer': 'return=representation',
       };
 
-  // --- CARICAMENTO DATI DA SUPABASE ---
   Future<void> _caricaIdrantiDaSupabase() async {
     setState(() => _caricamentoCloud = true);
     try {
@@ -121,7 +119,6 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  // --- SALVATAGGIO SU SUPABASE ---
   Future<void> _salvaIdranteSuSupabase(PuntoIdrico idrante) async {
     setState(() => _caricamentoCloud = true);
     try {
@@ -152,7 +149,6 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  // --- AGGIORNAMENTO STATO SU SUPABASE ---
   Future<void> _cambiaStatoIdrante(PuntoIdrico idrante, String nuovoStato) async {
     setState(() {
       idrante.stato = nuovoStato;
@@ -169,7 +165,6 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  // --- ELIMINAZIONE DA SUPABASE ---
   Future<void> _eliminaIdranteDaSupabase(PuntoIdrico idrante) async {
     try {
       await http.delete(
@@ -481,7 +476,7 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
                       color: isH24 ? Colors.green[800] : Colors.orange[900],
                     ),
                   ),
-                  subtitle: const Text('Disattiva se si trova in area privata/recintata', style: TextStyle(fontSize: 11)),
+                  subtitle: const Text('Disattiva se in area privata/recintata', style: TextStyle(fontSize: 11)),
                   value: isH24,
                   activeColor: Colors.green[700],
                   onChanged: (v) => setDialogState(() => isH24 = v),
