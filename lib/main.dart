@@ -131,13 +131,13 @@ class _HomePageState extends State<HomePage> {
     super.dispose();
   }
 
-  // Rileva la posizione reale e aggiorna sia il marker che la vista della mappa
+  // Funzione GPS con Fallback per massima compatibilità Web
   Future<void> _ottieniPosizioneGPSReale() async {
     setState(() => _caricamentoGPS = true);
 
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
-      _mostraMessaggio('Attiva il GPS del dispositivo per rilevare la posizione.');
+      _mostraMessaggio('Attiva il GPS del dispositivo/browser.');
       setState(() => _caricamentoGPS = false);
       return;
     }
@@ -146,21 +146,22 @@ class _HomePageState extends State<HomePage> {
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
-        _mostraMessaggio('Permessi GPS negati.');
+        _mostraMessaggio('Permessi GPS negati dal browser.');
         setState(() => _caricamentoGPS = false);
         return;
       }
     }
 
     if (permission == LocationPermission.deniedForever) {
-      _mostraMessaggio('I permessi GPS sono disabilitati nelle impostazioni.');
+      _mostraMessaggio('Permessi GPS bloccati. Abilitali nelle impostazioni del browser.');
       setState(() => _caricamentoGPS = false);
       return;
     }
 
     try {
       Position pos = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+        desiredAccuracy: LocationAccuracy.medium,
+        timeLimit: const Duration(seconds: 8),
       );
 
       setState(() {
@@ -170,10 +171,21 @@ class _HomePageState extends State<HomePage> {
       });
 
       _mapController.move(LatLng(posizioneCorrenteLat, posizioneCorrenteLng), 14.0);
-      _mostraMessaggio('Posizione reale della squadra aggiornata!');
+      _mostraMessaggio('Posizione reale aggiornata!');
     } catch (e) {
-      _mostraMessaggio('Errore lettura GPS: $e');
-      setState(() => _caricamentoGPS = false);
+      Position? lastPos = await Geolocator.getLastKnownPosition();
+      if (lastPos != null) {
+        setState(() {
+          posizioneCorrenteLat = lastPos.latitude;
+          posizioneCorrenteLng = lastPos.longitude;
+          _caricamentoGPS = false;
+        });
+        _mapController.move(LatLng(posizioneCorrenteLat, posizioneCorrenteLng), 14.0);
+        _mostraMessaggio('Recuperata ultima posizione nota!');
+      } else {
+        _mostraMessaggio('Impossibile rilevare il GPS: assicurati che sia attivo il segnale.');
+        setState(() => _caricamentoGPS = false);
+      }
     }
   }
 
@@ -729,7 +741,7 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
 
-            // SEZIONE MAPPA INTEGRATA IN HOMEPAGE
+            // Mappa Integrata in Homepage
             SizedBox(
               height: 240,
               width: double.infinity,
@@ -746,7 +758,7 @@ class _HomePageState extends State<HomePage> {
                   ),
                   MarkerLayer(
                     markers: [
-                      // Marker per la Posizione Reale della Squadra AIB
+                      // Posizione Squadra GPS
                       Marker(
                         point: LatLng(posizioneCorrenteLat, posizioneCorrenteLng),
                         width: 40,
@@ -757,7 +769,7 @@ class _HomePageState extends State<HomePage> {
                           size: 32,
                         ),
                       ),
-                      // Marcatori Punti Idrici Censiti
+                      // Marcatori Punti Idrici
                       ...idrantiMostrati.map((idrante) {
                         bool isGuasto = idrante.stato == 'Non Funzionante';
                         Color coloreMarker = isGuasto
