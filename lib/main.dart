@@ -41,7 +41,7 @@ class _HomePageState extends State<HomePage> {
   final String _supabaseUrl = 'https://srielrbjejggxvpeshfd.supabase.co';
   final String _supabaseApiKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNyaWVscmJqZWpnZ3h2cGVzaGZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODczMjcwMzAsImV4cCI6MjEwMjkwMzAzMH0.3nX0meQZYEAIMEvuFSZVP0CTvgbTKES5bS5gDRDFa-c';
 
-  final String _passwordEliminazione = 'AIB2026';
+  final String _passwordEliminazione = 'Ticino2026';
   String _filtroSelezionato = 'Tutti';
 
   double posizioneCorrenteLat = 45.6512;
@@ -238,11 +238,13 @@ class _HomePageState extends State<HomePage> {
     if (idrante.hasUni45) attacchi.add('UNI 45');
     if (idrante.hasUni70) attacchi.add('UNI 70');
     String attacchiStr = attacchi.isNotEmpty ? attacchi.join(', ') : 'Nessuno';
+    String accessoStr = idrante.isH24 ? 'Accessibile H24' : 'Proprietà Privata';
 
     String testoCondivisione = '''
 🚨 *PUNTO IDRICO AIB*
 📌 *Codice:* ${idrante.codice} (${idrante.tipo})
 📍 *Ubicazione:* ${idrante.ubicazione}
+🔑 *Accesso:* $accessoStr
 🟢 *Stato:* ${idrante.stato}
 ⚙️ *Attacchi:* $attacchiStr
 
@@ -376,6 +378,24 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
             const SizedBox(height: 6),
             Text('Ubicazione: ${idrante.ubicazione}'),
             const SizedBox(height: 6),
+            Row(
+              children: [
+                Icon(
+                  idrante.isH24 ? Icons.lock_open : Icons.lock,
+                  size: 16,
+                  color: idrante.isH24 ? Colors.green[700] : Colors.orange[800],
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  idrante.isH24 ? 'Accessibile H24' : 'Proprietà Privata',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: idrante.isH24 ? Colors.green[800] : Colors.orange[900],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
             Text('Distanza: ${distanzaKm.toStringAsFixed(2)} km', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
             const Divider(height: 16),
             Text('WGS84: $latGMS - $lngGMS', style: const TextStyle(fontSize: 12)),
@@ -419,6 +439,7 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
     String statoSelezionato = 'Funzionante';
     bool hasUni45 = true;
     bool hasUni70 = true;
+    bool isH24 = true;
 
     _codiceController.text = _generaCodiceProgressivo(tipoSelezionato);
     Map<String, bool> mezziSelezionati = {for (var m in mezziDisponibili) m: false};
@@ -450,6 +471,21 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
                 TextField(controller: _codiceController, decoration: const InputDecoration(labelText: 'Codice Progressivo')),
                 const SizedBox(height: 8),
                 TextField(controller: _ubicazioneController, decoration: const InputDecoration(labelText: 'Ubicazione')),
+                const SizedBox(height: 8),
+                SwitchListTile(
+                  title: Text(
+                    isH24 ? 'Accessibile H24 (Pubblico)' : 'Proprietà Privata',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                      color: isH24 ? Colors.green[800] : Colors.orange[900],
+                    ),
+                  ),
+                  subtitle: const Text('Disattiva se si trova in area privata/recintata', style: TextStyle(fontSize: 11)),
+                  value: isH24,
+                  activeColor: Colors.green[700],
+                  onChanged: (v) => setDialogState(() => isH24 = v),
+                ),
                 const SizedBox(height: 8),
                 Row(
                   children: [
@@ -502,6 +538,7 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
                   mezziCompatibili: selezionati,
                   hasUni45: hasUni45,
                   hasUni70: hasUni70,
+                  isH24: isH24,
                 );
 
                 Navigator.of(ctx).pop();
@@ -537,7 +574,17 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
       appBar: AppBar(
         backgroundColor: Colors.blue[800],
         foregroundColor: Colors.white,
-        title: const Text('Idranti AIB Cloud', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Row(
+          children: [
+            Image.asset(
+              'assets/logo.png',
+              height: 32,
+              errorBuilder: (context, error, stackTrace) => const Icon(Icons.local_fire_department, color: Colors.orange),
+            ),
+            const SizedBox(width: 10),
+            const Text('Idranti AIB Cloud', style: TextStyle(fontWeight: FontWeight.bold)),
+          ],
+        ),
         actions: [
           IconButton(icon: const Icon(Icons.refresh), onPressed: _caricaIdrantiDaSupabase, tooltip: 'Ricarica da Supabase'),
           IconButton(icon: const Icon(Icons.my_location), onPressed: _ottieniPosizioneGPSNativaWeb, tooltip: 'Aggiorna GPS'),
@@ -619,7 +666,7 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
                   child: ListTile(
                     leading: _buildIconaSimbolo(idrante.tipo),
                     title: Text('${idrante.codice} - ${idrante.tipo}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text('${idrante.ubicazione}\nDistanza: ${dist.toStringAsFixed(2)} km'),
+                    subtitle: Text('${idrante.ubicazione} (${idrante.isH24 ? "H24" : "Privato"})\nDistanza: ${dist.toStringAsFixed(2)} km'),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -690,6 +737,7 @@ class PuntoIdrico {
   final List<String> mezziCompatibili;
   final bool hasUni45;
   final bool hasUni70;
+  final bool isH24;
 
   PuntoIdrico({
     required this.id,
@@ -702,6 +750,7 @@ class PuntoIdrico {
     this.mezziCompatibili = const [],
     this.hasUni45 = false,
     this.hasUni70 = false,
+    this.isH24 = true,
   });
 
   Map<String, dynamic> toMap() {
@@ -715,6 +764,7 @@ class PuntoIdrico {
       'mezzicompatibili': mezziCompatibili.join(','),
       'hasuni45': hasUni45,
       'hasuni70': hasUni70,
+      'ish24': isH24,
     };
   }
 
@@ -733,6 +783,7 @@ class PuntoIdrico {
       mezziCompatibili: mezzi,
       hasUni45: map['hasuni45'] == true,
       hasUni70: map['hasuni70'] == true,
+      isH24: map['ish24'] ?? true,
     );
   }
 }
