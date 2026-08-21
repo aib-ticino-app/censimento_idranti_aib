@@ -1,7 +1,9 @@
+import 'dart:convert';
 import 'dart:html' as html;
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -35,13 +37,16 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  // Il tuo URL reale di Firebase Realtime Database
+  final String _firebaseUrl = 'https://idranti-aib-default-rtdb.europe-west1.firebasedatabase.app';
+
   final String _passwordEliminazione = 'AIB2026';
   String _filtroSelezionato = 'Tutti';
 
-  // Coordinate di default (Parco del Ticino)
   double posizioneCorrenteLat = 45.6512;
   double posizioneCorrenteLng = 8.7123;
   bool _caricamentoGPS = false;
+  bool _caricamentoCloud = false;
 
   final MapController _mapController = MapController();
 
@@ -58,56 +63,7 @@ class _HomePageState extends State<HomePage> {
     'Presa d\'Acqua Naturale',
   ];
 
-  List<PuntoIdrico> listaIdranti = [
-    PuntoIdrico(
-      id: '1',
-      codice: 'IDR-S-01',
-      tipo: 'Idrante Soprasuolo',
-      ubicazione: 'Via Parco Ticino 12',
-      stato: 'Funzionante',
-      latitudine: 45.6520,
-      longitudine: 8.7130,
-      mezziCompatibili: ['Pickup Modulo AIB', 'Autobotte AIB'],
-      hasUni45: true,
-      hasUni70: true,
-    ),
-    PuntoIdrico(
-      id: '2',
-      codice: 'VAS-01',
-      tipo: 'Vasca AIB di Riserva',
-      ubicazione: 'Loc. Sottobosco - Sentiero 3',
-      stato: 'Funzionante',
-      latitudine: 45.6589,
-      longitudine: 8.7201,
-      mezziCompatibili: ['Pickup Modulo AIB', 'Elicottero / Bambi Bucket'],
-      hasUni45: false,
-      hasUni70: true,
-    ),
-    PuntoIdrico(
-      id: '3',
-      codice: 'IDR-U-01',
-      tipo: 'Idrante Sottosuolo',
-      ubicazione: 'Via Centrale / Ang. Via Roma',
-      stato: 'Non Funzionante',
-      latitudine: 45.6480,
-      longitudine: 8.7050,
-      mezziCompatibili: ['Pickup Modulo AIB', 'Autobotte AIB'],
-      hasUni45: true,
-      hasUni70: false,
-    ),
-    PuntoIdrico(
-      id: '4',
-      codice: 'PRE-01',
-      tipo: 'Presa d\'Acqua Naturale',
-      ubicazione: 'Torrente Ticino - Ansa Nord',
-      stato: 'Da Verificare',
-      latitudine: 45.6700,
-      longitudine: 8.7300,
-      mezziCompatibili: ['Elicottero / Bambi Bucket'],
-      hasUni45: false,
-      hasUni70: false,
-    ),
-  ];
+  List<PuntoIdrico> listaIdranti = [];
 
   final _codiceController = TextEditingController();
   final _ubicazioneController = TextEditingController();
@@ -119,6 +75,7 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _ottieniPosizioneGPSNativaWeb();
+    _caricaIdrantiDaFirebase();
   }
 
   @override
@@ -131,9 +88,83 @@ class _HomePageState extends State<HomePage> {
     super.dispose();
   }
 
+  // --- CARICAMENTO DATI DA FIREBASE ---
+  Future<void> _caricaIdrantiDaFirebase() async {
+    setState(() => _caricamentoCloud = true);
+    try {
+      final response = await http.get(Uri.parse('$_firebaseUrl/idranti.json'));
+      if (response.statusCode == 200 && response.body != 'null') {
+        final Map<String, dynamic> data = json.decode(response.body);
+        List<PuntoIdrico> caricati = [];
+        data.forEach((key, item) {
+          caricati.add(PuntoIdrico.fromMap(key, item));
+        });
+        setState(() {
+          listaIdranti = caricati;
+        });
+      } else {
+        setState(() {
+          listaIdranti = [];
+        });
+      }
+    } catch (e) {
+      _mostraMessaggio('Errore connessione Cloud Firebase.');
+    } finally {
+      setState(() => _caricamentoCloud = false);
+    }
+  }
+
+  // --- SALVATAGGIO NUOVO IDRANTE SU FIREBASE ---
+  Future<void> _salvaIdranteSuFirebase(PuntoIdrico idrante) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$_firebaseUrl/idranti.json'),
+        body: json.encode(idrante.toMap()),
+      );
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        idrante.id = data['name'];
+        setState(() {
+          listaIdranti.add(idrante);
+        });
+        _mostraMessaggio('Punto idrico salvato nel Cloud!');
+      }
+    } catch (e) {
+      _mostraMessaggio('Impossibile salvare su Firebase.');
+    }
+  }
+
+  // --- AGGIORNAMENTO STATO SU FIREBASE ---
+  Future<void> _cambiaStatoIdrante(PuntoIdrico idrante, String nuovoStato) async {
+    setState(() {
+      idrante.stato = nuovoStato;
+    });
+    try {
+      await http.patch(
+        Uri.parse('$_firebaseUrl/idranti/${idrante.id}.json'),
+        body: json.encode({'stato': nuovoStato}),
+      );
+      _mostraMessaggio('Stato aggiornato nel Cloud: $nuovoStato');
+    } catch (e) {
+      _mostraMessaggio('Errore aggiornamento Cloud.');
+    }
+  }
+
+  // --- ELIMINAZIONE DA FIREBASE ---
+  Future<void> _eliminaIdranteDaFirebase(PuntoIdrico idrante) async {
+    try {
+      await http.delete(Uri.parse('$_firebaseUrl/idranti/${idrante.id}.json'));
+      setState(() {
+        listaIdranti.removeWhere((item) => item.id == idrante.id);
+      });
+      _mostraMessaggio('Punto idrico eliminato dal Cloud.');
+    } catch (e) {
+      _mostraMessaggio('Errore durante l\'eliminazione da Firebase.');
+    }
+  }
+
   void _ottieniPosizioneGPSNativaWeb() {
     setState(() => _caricamentoGPS = true);
-
     if (html.window.navigator.geolocation != null) {
       html.window.navigator.geolocation!.getCurrentPosition().then((pos) {
         if (pos.coords != null) {
@@ -142,17 +173,13 @@ class _HomePageState extends State<HomePage> {
             posizioneCorrenteLng = pos.coords!.longitude!.toDouble();
             _caricamentoGPS = false;
           });
-
           _mapController.move(LatLng(posizioneCorrenteLat, posizioneCorrenteLng), 14.0);
-          _mostraMessaggio('Posizione reale aggiornata!');
         }
-      }).catchError((error) {
+      }).catchError((_) {
         setState(() => _caricamentoGPS = false);
-        _mostraMessaggio('Permesso GPS negato o segnale non disponibile nel browser.');
       });
     } else {
       setState(() => _caricamentoGPS = false);
-      _mostraMessaggio('Geolocalizzazione non supportata da questo browser.');
     }
   }
 
@@ -163,20 +190,13 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // Conversione da coordinate decimali a WGS84 (Gradi, Minuti, Secondi)
   String _convertiInWGS84GMS(double coordinate, bool isLat) {
     int gradi = coordinate.abs().floor();
     double minutiDecimali = (coordinate.abs() - gradi) * 60;
     int minuti = minutiDecimali.floor();
     double secondi = (minutiDecimali - minuti) * 60;
 
-    String direzione;
-    if (isLat) {
-      direzione = coordinate >= 0 ? 'N' : 'S';
-    } else {
-      direzione = coordinate >= 0 ? 'E' : 'W';
-    }
-
+    String direzione = isLat ? (coordinate >= 0 ? 'N' : 'S') : (coordinate >= 0 ? 'E' : 'W');
     String gradiStr = gradi.toString().padLeft(isLat ? 2 : 3, '0');
     String minutiStr = minuti.toString().padLeft(2, '0');
     String secondiStr = secondi.toStringAsFixed(1).padLeft(4, '0');
@@ -184,7 +204,6 @@ class _HomePageState extends State<HomePage> {
     return '$gradiStr° $minutiStr\' $secondiStr" $direzione';
   }
 
-  // Funzione di Condivisione dei dati del Punto Idrico
   void _condividiPuntoIdrico(PuntoIdrico idrante) {
     String latGMS = _convertiInWGS84GMS(idrante.latitudine, true);
     String lngGMS = _convertiInWGS84GMS(idrante.longitudine, false);
@@ -216,55 +235,39 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
         'title': 'Punto Idrico ${idrante.codice}',
         'text': testoCondivisione,
       });
-    } catch (e) {
+    } catch (_) {
       html.window.navigator.clipboard?.writeText(testoCondivisione);
       _mostraMessaggio('Dati del punto idrico copiati negli appunti!');
     }
   }
 
   String _generaCodiceProgressivo(String tipo) {
-    String prefisso = 'IDR';
-    if (tipo == 'Idrante Soprasuolo') {
-      prefisso = 'IDR-S';
-    } else if (tipo == 'Idrante Sottosuolo') {
-      prefisso = 'IDR-U';
-    } else if (tipo == 'Vasca AIB di Riserva') {
-      prefisso = 'VAS';
-    } else if (tipo == 'Presa d\'Acqua Naturale') {
-      prefisso = 'PRE';
-    }
+    String prefisso = 'IDR-S';
+    if (tipo == 'Idrante Sottosuolo') prefisso = 'IDR-U';
+    if (tipo == 'Vasca AIB di Riserva') prefisso = 'VAS';
+    if (tipo == 'Presa d\'Acqua Naturale') prefisso = 'PRE';
 
     int conteggio = listaIdranti.where((item) => item.tipo == tipo).length + 1;
-    String numeroFormattato = conteggio.toString().padLeft(2, '0');
-
-    return '$prefisso-$numeroFormattato';
+    return '$prefisso-${conteggio.toString().padLeft(2, '0')}';
   }
 
   double _calcolaDistanzaKm(double lat1, double lon1, double lat2, double lon2) {
     const double p = 0.017453292519943295;
-    final double a = 0.5 -
-        cos((lat2 - lat1) * p) / 2 +
-        cos(lat1 * p) * cos(lat2 * p) * (1 - cos((lon2 - lon1) * p)) / 2;
+    final double a = 0.5 - cos((lat2 - lat1) * p) / 2 + cos(lat1 * p) * cos(lat2 * p) * (1 - cos((lon2 - lon1) * p)) / 2;
     return 12742 * asin(sqrt(a));
   }
 
   List<PuntoIdrico> get _idrantiFiltratiEVicini {
     List<PuntoIdrico> listaFiltrata = listaIdranti.where((item) {
-      if (_filtroSelezionato == 'Idranti') {
-        return item.tipo.contains('Idrante');
-      } else if (_filtroSelezionato == 'Vasche') {
-        return item.tipo.contains('Vasca');
-      } else if (_filtroSelezionato == 'Prese d\'Acqua') {
-        return item.tipo.contains('Presa');
-      }
+      if (_filtroSelezionato == 'Idranti') return item.tipo.contains('Idrante');
+      if (_filtroSelezionato == 'Vasche') return item.tipo.contains('Vasca');
+      if (_filtroSelezionato == 'Prese d\'Acqua') return item.tipo.contains('Presa');
       return true;
     }).toList();
 
     listaFiltrata.sort((a, b) {
-      double distA = _calcolaDistanzaKm(
-          posizioneCorrenteLat, posizioneCorrenteLng, a.latitudine, a.longitudine);
-      double distB = _calcolaDistanzaKm(
-          posizioneCorrenteLat, posizioneCorrenteLng, b.latitudine, b.longitudine);
+      double distA = _calcolaDistanzaKm(posizioneCorrenteLat, posizioneCorrenteLng, a.latitudine, a.longitudine);
+      double distB = _calcolaDistanzaKm(posizioneCorrenteLat, posizioneCorrenteLng, b.latitudine, b.longitudine);
       return distA.compareTo(distB);
     });
 
@@ -273,46 +276,23 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
 
   Color _getColoreStato(String stato) {
     switch (stato) {
-      case 'Non Funzionante':
-        return Colors.red[700]!;
-      case 'Da Verificare':
-        return Colors.orange[800]!;
-      case 'Funzionante':
-      default:
-        return Colors.green[700]!;
+      case 'Non Funzionante': return Colors.red[700]!;
+      case 'Da Verificare': return Colors.orange[800]!;
+      default: return Colors.green[700]!;
     }
   }
 
   Widget _buildIconaSimbolo(String tipo, {double size = 22, Color? overrideColor}) {
-    if (tipo.contains('Vasca')) {
-      return IconaVascaAIB(size: size);
-    } else if (tipo.contains('Presa')) {
-      return Icon(Icons.waves, size: size, color: overrideColor ?? Colors.blue[800]);
-    }
+    if (tipo.contains('Vasca')) return IconaVascaAIB(size: size);
+    if (tipo.contains('Presa')) return Icon(Icons.waves, size: size, color: overrideColor ?? Colors.blue[800]);
     return Icon(Icons.fire_hydrant_alt, size: size, color: overrideColor ?? Colors.blue[800]);
   }
 
   Future<void> _avviaNavigatoreReale(double lat, double lng) async {
-    final Uri googleMapsUrl = Uri.parse(
-        'https://www.google.com/maps/dir/?api=1&destination=$lat,$lng&travelmode=driving');
-
-    try {
-      if (await canLaunchUrl(googleMapsUrl)) {
-        await launchUrl(googleMapsUrl, mode: LaunchMode.externalApplication);
-      } else {
-        final Uri geoUrl = Uri.parse('geo:$lat,$lng?q=$lat,$lng');
-        await launchUrl(geoUrl);
-      }
-    } catch (e) {
-      _mostraMessaggio('Impossibile aprire il navigatore: $e');
+    final Uri googleMapsUrl = Uri.parse('https://www.google.com/maps/dir/?api=1&destination=$lat,$lng&travelmode=driving');
+    if (await canLaunchUrl(googleMapsUrl)) {
+      await launchUrl(googleMapsUrl, mode: LaunchMode.externalApplication);
     }
-  }
-
-  void _cambiaStatoIdrante(PuntoIdrico idrante, String nuovoStato) {
-    setState(() {
-      idrante.stato = nuovoStato;
-    });
-    _mostraMessaggio('Stato idrante ${idrante.codice} aggiornato in: $nuovoStato');
   }
 
   void _confermaEliminazioneIdrante(PuntoIdrico idrante) {
@@ -320,49 +300,28 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.security, color: Colors.red),
-            SizedBox(width: 8),
-            Text('Protezione Eliminazione'),
-          ],
-        ),
+        title: const Text('Protezione Eliminazione'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Per eliminare l\'idrante ${idrante.codice}, inserisci la password della squadra:'),
+            Text('Inserisci password per eliminare ${idrante.codice}:'),
             const SizedBox(height: 12),
-            TextField(
-              controller: _passwordController,
-              obscureText: true,
-              decoration: const InputDecoration(
-                labelText: 'Password',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.lock),
-              ),
-            ),
+            TextField(controller: _passwordController, obscureText: true, decoration: const InputDecoration(border: OutlineInputBorder())),
           ],
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Annulla'),
-          ),
+          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Annulla')),
           ElevatedButton(
             onPressed: () {
               if (_passwordController.text == _passwordEliminazione) {
-                setState(() {
-                  listaIdranti.removeWhere((item) => item.id == idrante.id);
-                });
                 Navigator.of(ctx).pop();
-                _mostraMessaggio('Idrante ${idrante.codice} eliminato con successo.');
+                _eliminaIdranteDaFirebase(idrante);
               } else {
-                _mostraMessaggio('Password errata! Eliminazione annullata.');
+                _mostraMessaggio('Password errata!');
               }
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Conferma Eliminazione', style: TextStyle(color: Colors.white)),
+            child: const Text('Elimina', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -389,83 +348,29 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
           children: [
             Text('Tipologia: ${idrante.tipo}', style: const TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 6),
-            Row(
-              children: [
-                const Text('Stato: ', style: TextStyle(fontWeight: FontWeight.bold)),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: _getColoreStato(idrante.stato),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    idrante.stato,
-                    style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
             Text('Ubicazione: ${idrante.ubicazione}'),
             const SizedBox(height: 6),
-            Text('Distanza dalla squadra: ${distanzaKm.toStringAsFixed(2)} km',
-                style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
+            Text('Distanza: ${distanzaKm.toStringAsFixed(2)} km', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
             const Divider(height: 16),
-            const Text('Coordinate GPS:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-            const SizedBox(height: 2),
-            Text('WGS84 (GMS): $latGMS - $lngGMS', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
-            Text('Decimali: ${idrante.latitudine.toStringAsFixed(6)}, ${idrante.longitudine.toStringAsFixed(6)}',
-                style: const TextStyle(fontSize: 11, color: Colors.grey)),
+            Text('WGS84: $latGMS - $lngGMS', style: const TextStyle(fontSize: 12)),
+            Text('Decimali: ${idrante.latitudine.toStringAsFixed(6)}, ${idrante.longitudine.toStringAsFixed(6)}', style: const TextStyle(fontSize: 11, color: Colors.grey)),
             const Divider(height: 16),
-            const Text('Attacchi / Diametri Disponibili:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-            const SizedBox(height: 4),
             Row(
               children: [
-                Chip(
-                  avatar: Icon(idrante.hasUni45 ? Icons.check : Icons.close,
-                      color: idrante.hasUni45 ? Colors.green : Colors.grey, size: 16),
-                  label: const Text('UNI 45', style: TextStyle(fontSize: 11)),
-                ),
+                Chip(label: Text('UNI 45', style: TextStyle(color: idrante.hasUni45 ? Colors.green : Colors.grey))),
                 const SizedBox(width: 8),
-                Chip(
-                  avatar: Icon(idrante.hasUni70 ? Icons.check : Icons.close,
-                      color: idrante.hasUni70 ? Colors.green : Colors.grey, size: 16),
-                  label: const Text('UNI 70', style: TextStyle(fontSize: 11)),
-                ),
+                Chip(label: Text('UNI 70', style: TextStyle(color: idrante.hasUni70 ? Colors.green : Colors.grey))),
               ],
             ),
-            const Divider(height: 16),
-            const Text('Mezzi Accessibili / Compatibili:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-            const SizedBox(height: 4),
-            idrante.mezziCompatibili.isNotEmpty
-                ? Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: idrante.mezziCompatibili
-                        .map((m) => Padding(
-                              padding: const EdgeInsets.only(left: 4.0, top: 2.0),
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.check_circle_outline, size: 14, color: Colors.green),
-                                  const SizedBox(width: 6),
-                                  Text(m, style: const TextStyle(fontSize: 12)),
-                                ],
-                              ),
-                            ))
-                        .toList(),
-                  )
-                : const Text('Nessun mezzo specificato', style: TextStyle(fontSize: 12, color: Colors.grey)),
+            if (idrante.mezziCompatibili.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text('Mezzi: ${idrante.mezziCompatibili.join(', ')}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+            ],
           ],
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.share, color: Colors.green),
-            tooltip: 'Condividi Dati WGS84',
-            onPressed: () => _condividiPuntoIdrico(idrante),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Chiudi'),
-          ),
+          IconButton(icon: const Icon(Icons.share, color: Colors.green), onPressed: () => _condividiPuntoIdrico(idrante)),
+          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Chiudi')),
           ElevatedButton.icon(
             onPressed: () {
               Navigator.of(ctx).pop();
@@ -473,10 +378,7 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
             },
             icon: const Icon(Icons.turn_right, color: Colors.white),
             label: const Text('Naviga'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue[700],
-              foregroundColor: Colors.white,
-            ),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.blue[700], foregroundColor: Colors.white),
           ),
         ],
       ),
@@ -488,15 +390,11 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
     _lngController.text = posizioneCorrenteLng.toStringAsFixed(4);
     String tipoSelezionato = tipologieDisponibili.first;
     String statoSelezionato = 'Funzionante';
-
     bool hasUni45 = true;
     bool hasUni70 = true;
 
     _codiceController.text = _generaCodiceProgressivo(tipoSelezionato);
-
-    Map<String, bool> mezziSelezionati = {
-      for (var m in mezziDisponibili) m: false
-    };
+    Map<String, bool> mezziSelezionati = {for (var m in mezziDisponibili) m: false};
 
     showDialog(
       context: context,
@@ -511,12 +409,7 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
                 DropdownButtonFormField<String>(
                   initialValue: tipoSelezionato,
                   decoration: const InputDecoration(labelText: 'Tipologia'),
-                  items: tipologieDisponibili.map((tipo) {
-                    return DropdownMenuItem(
-                      value: tipo,
-                      child: Text(tipo, style: const TextStyle(fontSize: 13)),
-                    );
-                  }).toList(),
+                  items: tipologieDisponibili.map((tipo) => DropdownMenuItem(value: tipo, child: Text(tipo, style: const TextStyle(fontSize: 13)))).toList(),
                   onChanged: (valore) {
                     if (valore != null) {
                       setDialogState(() {
@@ -527,87 +420,22 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
                   },
                 ),
                 const SizedBox(height: 8),
-                TextField(
-                  controller: _codiceController,
-                  decoration: const InputDecoration(
-                    labelText: 'Codice / Sigla Progressiva',
-                    hintText: 'Generato automaticamente',
-                  ),
-                ),
+                TextField(controller: _codiceController, decoration: const InputDecoration(labelText: 'Codice Progressivo')),
                 const SizedBox(height: 8),
-                DropdownButtonFormField<String>(
-                  initialValue: statoSelezionato,
-                  decoration: const InputDecoration(labelText: 'Stato Idrante'),
-                  items: ['Funzionante', 'Non Funzionante', 'Da Verificare'].map((st) {
-                    return DropdownMenuItem(
-                      value: st,
-                      child: Text(st, style: const TextStyle(fontSize: 13)),
-                    );
-                  }).toList(),
-                  onChanged: (valore) {
-                    if (valore != null) {
-                      setDialogState(() => statoSelezionato = valore);
-                    }
-                  },
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _ubicazioneController,
-                  decoration: const InputDecoration(
-                    labelText: 'Ubicazione / Riferimento',
-                    hintText: 'es. Via Roma, ang. Via Verdi',
-                  ),
-                ),
+                TextField(controller: _ubicazioneController, decoration: const InputDecoration(labelText: 'Ubicazione')),
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _latController,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        decoration: const InputDecoration(labelText: 'Latitudine'),
-                      ),
-                    ),
+                    Expanded(child: TextField(controller: _latController, decoration: const InputDecoration(labelText: 'Latitudine'))),
                     const SizedBox(width: 8),
-                    Expanded(
-                      child: TextField(
-                        controller: _lngController,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        decoration: const InputDecoration(labelText: 'Longitudine'),
-                      ),
-                    ),
+                    Expanded(child: TextField(controller: _lngController, decoration: const InputDecoration(labelText: 'Longitudine'))),
                   ],
                 ),
-                const SizedBox(height: 12),
-                const Text(
-                  'Diametro Attacchi Disponibili:',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                ),
-                CheckboxListTile(
-                  title: const Text('Attacco UNI 45', style: TextStyle(fontSize: 13)),
-                  value: hasUni45,
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                  controlAffinity: ListTileControlAffinity.leading,
-                  onChanged: (val) {
-                    setDialogState(() => hasUni45 = val ?? false);
-                  },
-                ),
-                CheckboxListTile(
-                  title: const Text('Attacco UNI 70', style: TextStyle(fontSize: 13)),
-                  value: hasUni70,
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                  controlAffinity: ListTileControlAffinity.leading,
-                  onChanged: (val) {
-                    setDialogState(() => hasUni70 = val ?? false);
-                  },
-                ),
                 const SizedBox(height: 8),
-                const Text(
-                  'Mezzi Compatibili:',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                ),
+                CheckboxListTile(title: const Text('UNI 45'), value: hasUni45, onChanged: (v) => setDialogState(() => hasUni45 = v ?? false)),
+                CheckboxListTile(title: const Text('UNI 70'), value: hasUni70, onChanged: (v) => setDialogState(() => hasUni70 = v ?? false)),
+                const SizedBox(height: 8),
+                const Text('Mezzi Compatibili:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                 ...mezziDisponibili.map((mezzo) {
                   return CheckboxListTile(
                     title: Text(mezzo, style: const TextStyle(fontSize: 13)),
@@ -626,49 +454,31 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
             ),
           ),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Annulla'),
-            ),
+            TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Annulla')),
             ElevatedButton(
               onPressed: () {
-                if (_codiceController.text.isEmpty || _ubicazioneController.text.isEmpty) {
-                  return;
-                }
+                if (_codiceController.text.isEmpty || _ubicazioneController.text.isEmpty) return;
 
-                List<String> selezionati = mezziSelezionati.entries
-                    .where((entry) => entry.value)
-                    .map((entry) => entry.key)
-                    .toList();
+                List<String> selezionati = mezziSelezionati.entries.where((e) => e.value).map((e) => e.key).toList();
 
-                setState(() {
-                  listaIdranti.add(
-                    PuntoIdrico(
-                      id: DateTime.now().toString(),
-                      codice: _codiceController.text,
-                      tipo: tipoSelezionato,
-                      ubicazione: _ubicazioneController.text,
-                      stato: statoSelezionato,
-                      latitudine: double.tryParse(_latController.text) ?? posizioneCorrenteLat,
-                      longitudine: double.tryParse(_lngController.text) ?? posizioneCorrenteLng,
-                      mezziCompatibili: selezionati,
-                      hasUni45: hasUni45,
-                      hasUni70: hasUni70,
-                    ),
-                  );
-                });
+                PuntoIdrico nuovo = PuntoIdrico(
+                  id: '',
+                  codice: _codiceController.text,
+                  tipo: tipoSelezionato,
+                  ubicazione: _ubicazioneController.text,
+                  stato: statoSelezionato,
+                  latitudine: double.tryParse(_latController.text) ?? posizioneCorrenteLat,
+                  longitudine: double.tryParse(_lngController.text) ?? posizioneCorrenteLng,
+                  mezziCompatibili: selezionati,
+                  hasUni45: hasUni45,
+                  hasUni70: hasUni70,
+                );
 
-                _codiceController.clear();
-                _ubicazioneController.clear();
-                _latController.clear();
-                _lngController.clear();
                 Navigator.of(ctx).pop();
+                _salvaIdranteSuFirebase(nuovo);
               },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue[700],
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('Salva Idrante'),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.blue[700], foregroundColor: Colors.white),
+              child: const Text('Salva nel Cloud'),
             ),
           ],
         ),
@@ -681,23 +491,10 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
     return Padding(
       padding: const EdgeInsets.only(right: 6.0),
       child: FilterChip(
-        label: Text(
-          etichetta,
-          style: TextStyle(
-            color: isSelected ? Colors.white : Colors.black87,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            fontSize: 12,
-          ),
-        ),
+        label: Text(etichetta, style: TextStyle(color: isSelected ? Colors.white : Colors.black87)),
         selected: isSelected,
         selectedColor: Colors.blue[800],
-        backgroundColor: Colors.grey[200],
-        checkmarkColor: Colors.white,
-        onSelected: (bool selected) {
-          setState(() {
-            _filtroSelezionato = etichetta;
-          });
-        },
+        onSelected: (bool selected) => setState(() => _filtroSelezionato = etichetta),
       ),
     );
   }
@@ -710,126 +507,47 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
       appBar: AppBar(
         backgroundColor: Colors.blue[800],
         foregroundColor: Colors.white,
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(2),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Image.network(
-                'https://raw.githubusercontent.com/spagnolocorrado-spec/censimento_idranti_aib/main/logo.png',
-                height: 34,
-                width: 44,
-                fit: BoxFit.contain,
-                errorBuilder: (context, error, stackTrace) =>
-                    const Icon(Icons.shield, color: Colors.blue, size: 28),
-              ),
-            ),
-            const SizedBox(width: 10),
-            const Text(
-              'Idranti AIB',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-            ),
-          ],
-        ),
+        title: const Text('Idranti AIB Cloud', style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
-          _caricamentoGPS
-              ? const Padding(
-                  padding: EdgeInsets.all(12.0),
-                  child: SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                  ),
-                )
-              : IconButton(
-                  icon: const Icon(Icons.my_location),
-                  onPressed: _ottieniPosizioneGPSNativaWeb,
-                  tooltip: 'Aggiorna Posizione GPS',
-                ),
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _caricaIdrantiDaFirebase, tooltip: 'Ricarica dal Cloud'),
+          IconButton(icon: const Icon(Icons.my_location), onPressed: _ottieniPosizioneGPSNativaWeb, tooltip: 'Aggiorna GPS'),
         ],
       ),
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (_caricamentoCloud) const LinearProgressIndicator(color: Colors.orange),
             Container(
-              height: 50,
-              width: double.infinity,
+              height: 40,
               color: Colors.blue[900],
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    'Parco Ticino - Volontari AIB',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Text(
-                    'GPS Squadra: ${posizioneCorrenteLat.toStringAsFixed(4)}, ${posizioneCorrenteLng.toStringAsFixed(4)}',
-                    style: const TextStyle(color: Colors.white70, fontSize: 11),
-                  ),
+                  const Text('Parco Ticino - Cloud AIB', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  Text('GPS: ${posizioneCorrenteLat.toStringAsFixed(4)}, ${posizioneCorrenteLng.toStringAsFixed(4)}', style: const TextStyle(color: Colors.white70, fontSize: 11)),
                 ],
               ),
             ),
-
-            // Sezione Mappa Integrata
             SizedBox(
               height: 240,
-              width: double.infinity,
               child: FlutterMap(
                 mapController: _mapController,
-                options: MapOptions(
-                  initialCenter: LatLng(posizioneCorrenteLat, posizioneCorrenteLng),
-                  initialZoom: 13.5,
-                ),
+                options: MapOptions(initialCenter: LatLng(posizioneCorrenteLat, posizioneCorrenteLng), initialZoom: 13.5),
                 children: [
-                  TileLayer(
-                    urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                    userAgentPackageName: 'com.example.idranti_aib',
-                  ),
+                  TileLayer(urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', userAgentPackageName: 'com.example.idranti_aib'),
                   MarkerLayer(
                     markers: [
-                      // Posizione Squadra
-                      Marker(
-                        point: LatLng(posizioneCorrenteLat, posizioneCorrenteLng),
-                        width: 40,
-                        height: 40,
-                        child: const Icon(
-                          Icons.navigation,
-                          color: Colors.blueAccent,
-                          size: 32,
-                        ),
-                      ),
-                      // Marcatori Punti Idrici
+                      Marker(point: LatLng(posizioneCorrenteLat, posizioneCorrenteLng), child: const Icon(Icons.navigation, color: Colors.blueAccent, size: 32)),
                       ...idrantiMostrati.map((idrante) {
-                        bool isGuasto = idrante.stato == 'Non Funzionante';
-                        Color coloreMarker = isGuasto
-                            ? Colors.red[800]!
-                            : (idrante.stato == 'Da Verificare' ? Colors.orange[800]! : Colors.green[800]!);
-
                         return Marker(
                           point: LatLng(idrante.latitudine, idrante.longitudine),
-                          width: 40,
-                          height: 40,
                           child: GestureDetector(
-                            onTap: () {
-                              double dist = _calcolaDistanzaKm(
-                                  posizioneCorrenteLat,
-                                  posizioneCorrenteLng,
-                                  idrante.latitudine,
-                                  idrante.longitudine);
-                              _mostraDettaglioIdrante(idrante, dist);
-                            },
+                            onTap: () => _mostraDettaglioIdrante(idrante, _calcolaDistanzaKm(posizioneCorrenteLat, posizioneCorrenteLng, idrante.latitudine, idrante.longitudine)),
                             child: CircleAvatar(
-                              backgroundColor: coloreMarker,
-                              child: _buildIconaSimbolo(idrante.tipo, size: 20, overrideColor: Colors.white),
+                              backgroundColor: _getColoreStato(idrante.stato),
+                              child: _buildIconaSimbolo(idrante.tipo, size: 18, overrideColor: Colors.white),
                             ),
                           ),
                         );
@@ -839,236 +557,72 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
                 ],
               ),
             ),
-
-            const SizedBox(height: 12),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              padding: const EdgeInsets.all(12.0),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    'Punti Idrici Censiti',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-                  ),
+                  Text('Punti Censiti (${listaIdranti.length})', style: const TextStyle(fontWeight: FontWeight.bold)),
                   ElevatedButton.icon(
                     onPressed: _mostraDialogoNuovoIdrante,
-                    icon: const Icon(Icons.add_location_alt, color: Colors.white, size: 18),
-                    label: const Text('+ Idrante', style: TextStyle(color: Colors.white, fontSize: 12)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue[700],
-                    ),
+                    icon: const Icon(Icons.cloud_upload, size: 16, color: Colors.white),
+                    label: const Text('+ Idrante Cloud', style: TextStyle(color: Colors.white)),
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.blue[700]),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 8),
-
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Row(
-                children: [
-                  _buildFilterChip('Tutti'),
-                  _buildFilterChip('Idranti'),
-                  _buildFilterChip('Vasche'),
-                  _buildFilterChip('Prese d\'Acqua'),
-                ],
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 12.0),
+              child: Row(children: [_buildFilterChip('Tutti'), _buildFilterChip('Idranti'), _buildFilterChip('Vasche'), _buildFilterChip('Prese d\'Acqua')]),
             ),
-
-            const SizedBox(height: 8),
-
-            idrantiMostrati.isEmpty
-                ? const Padding(
-                    padding: EdgeInsets.all(32.0),
-                    child: Center(
-                      child: Text(
-                        'Nessun punto idrico trovato per questa categoria.',
-                        style: TextStyle(color: Colors.grey, fontSize: 13),
-                      ),
-                    ),
-                  )
-                : ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: idrantiMostrati.length,
-                    itemBuilder: (ctx, index) {
-                      final idrante = idrantiMostrati[index];
-                      double dist = _calcolaDistanzaKm(
-                        posizioneCorrenteLat,
-                        posizioneCorrenteLng,
-                        idrante.latitudine,
-                        idrante.longitudine,
-                      );
-
-                      bool isGuasto = idrante.stato == 'Non Funzionante';
-
-                      return Card(
-                        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                        elevation: 2,
-                        color: isGuasto ? Colors.red[50] : Colors.white,
-                        child: InkWell(
-                          onTap: () => _mostraDettaglioIdrante(idrante, dist),
-                          child: Padding(
-                            padding: const EdgeInsets.all(10.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    CircleAvatar(
-                                      backgroundColor: isGuasto
-                                          ? Colors.red[100]
-                                          : (idrante.stato == 'Da Verificare' ? Colors.orange[100] : Colors.blue[100]),
-                                      child: _buildIconaSimbolo(
-                                        idrante.tipo,
-                                        size: 20,
-                                        overrideColor: isGuasto
-                                            ? Colors.red[800]
-                                            : (idrante.stato == 'Da Verificare' ? Colors.orange[900] : Colors.blue[800]),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 10),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            children: [
-                                              Text(
-                                                '${idrante.codice} - ${idrante.tipo}',
-                                                style: TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                  fontSize: 14,
-                                                  color: isGuasto ? Colors.red[900] : Colors.black,
-                                                ),
-                                              ),
-                                              const SizedBox(width: 8),
-                                              Container(
-                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                                decoration: BoxDecoration(
-                                                  color: _getColoreStato(idrante.stato),
-                                                  borderRadius: BorderRadius.circular(4),
-                                                ),
-                                                child: Text(
-                                                  idrante.stato,
-                                                  style: const TextStyle(
-                                                    color: Colors.white,
-                                                    fontSize: 10,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text('Ubicazione: ${idrante.ubicazione}', style: const TextStyle(fontSize: 12)),
-                                          Text(
-                                            'Distanza: ${dist.toStringAsFixed(2)} km',
-                                            style: TextStyle(
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.bold,
-                                              color: isGuasto ? Colors.red[700] : Colors.blueGrey,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Row(
-                                            children: [
-                                              if (idrante.hasUni45)
-                                                Container(
-                                                  margin: const EdgeInsets.only(right: 4),
-                                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                                                  decoration: BoxDecoration(
-                                                    color: Colors.grey[200],
-                                                    borderRadius: BorderRadius.circular(3),
-                                                  ),
-                                                  child: const Text('UNI 45', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-                                                ),
-                                              if (idrante.hasUni70)
-                                                Container(
-                                                  margin: const EdgeInsets.only(right: 4),
-                                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                                                  decoration: BoxDecoration(
-                                                    color: Colors.grey[200],
-                                                    borderRadius: BorderRadius.circular(3),
-                                                  ),
-                                                  child: const Text('UNI 70', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-                                                ),
-                                            ],
-                                          ),
-                                          if (idrante.mezziCompatibili.isNotEmpty) ...[
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              'Mezzi: ${idrante.mezziCompatibili.join(', ')}',
-                                              style: TextStyle(fontSize: 11, color: Colors.blueGrey[800], fontWeight: FontWeight.w500),
-                                            ),
-                                          ],
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const Divider(height: 12),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    PopupMenuButton<String>(
-                                      icon: const Icon(Icons.build_circle, color: Colors.blueGrey),
-                                      tooltip: 'Cambia Stato',
-                                      onSelected: (String nuovoStato) {
-                                        _cambiaStatoIdrante(idrante, nuovoStato);
-                                      },
-                                      itemBuilder: (BuildContext context) => [
-                                        const PopupMenuItem(
-                                          value: 'Funzionante',
-                                          child: Text('Segna come: Funzionante', style: TextStyle(color: Colors.green)),
-                                        ),
-                                        const PopupMenuItem(
-                                          value: 'Non Funzionante',
-                                          child: Text('Segna come: Non Funzionante', style: TextStyle(color: Colors.red)),
-                                        ),
-                                        const PopupMenuItem(
-                                          value: 'Da Verificare',
-                                          child: Text('Segna come: Da Verificare', style: TextStyle(color: Colors.orange)),
-                                        ),
-                                      ],
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.delete_outline, color: Colors.red),
-                                      tooltip: 'Elimina Idrante (Richiede Password)',
-                                      onPressed: () => _confermaEliminazioneIdrante(idrante),
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.share, color: Colors.green),
-                                      tooltip: 'Condividi WGS84',
-                                      onPressed: () => _condividiPuntoIdrico(idrante),
-                                    ),
-                                    const Spacer(),
-                                    IconButton(
-                                      icon: const Icon(Icons.info_outline, color: Colors.blue),
-                                      tooltip: 'Vedi Dettaglio',
-                                      onPressed: () => _mostraDettaglioIdrante(idrante, dist),
-                                    ),
-                                    ElevatedButton.icon(
-                                      onPressed: () => _avviaNavigatoreReale(idrante.latitudine, idrante.longitudine),
-                                      icon: const Icon(Icons.navigation, size: 14, color: Colors.white),
-                                      label: const Text('Naviga', style: TextStyle(fontSize: 11, color: Colors.white)),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: isGuasto ? Colors.grey[700] : Colors.green[700],
-                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                      ),
-                                    ),
-                                  ],
-                                )
-                              ],
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: idrantiMostrati.length,
+              itemBuilder: (ctx, index) {
+                final idrante = idrantiMostrati[index];
+                double dist = _calcolaDistanzaKm(posizioneCorrenteLat, posizioneCorrenteLng, idrante.latitudine, idrante.longitudine);
+                return Card(
+                  margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  child: ListTile(
+                    leading: _buildIconaSimbolo(idrante.tipo),
+                    title: Text('${idrante.codice} - ${idrante.tipo}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: Text('${idrante.ubicazione}\nDistanza: ${dist.toStringAsFixed(2)} km'),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        PopupMenuButton<String>(
+                          icon: const Icon(Icons.build_circle, color: Colors.blueGrey),
+                          tooltip: 'Cambia Stato',
+                          onSelected: (String nuovoStato) {
+                            _cambiaStatoIdrante(idrante, nuovoStato);
+                          },
+                          itemBuilder: (BuildContext context) => [
+                            const PopupMenuItem(
+                              value: 'Funzionante',
+                              child: Text('Segna come: Funzionante', style: TextStyle(color: Colors.green)),
                             ),
-                          ),
+                            const PopupMenuItem(
+                              value: 'Non Funzionante',
+                              child: Text('Segna come: Non Funzionante', style: TextStyle(color: Colors.red)),
+                            ),
+                            const PopupMenuItem(
+                              value: 'Da Verificare',
+                              child: Text('Segna come: Da Verificare', style: TextStyle(color: Colors.orange)),
+                            ),
+                          ],
                         ),
-                      );
-                    },
+                        IconButton(icon: const Icon(Icons.share, color: Colors.green), onPressed: () => _condividiPuntoIdrico(idrante)),
+                        IconButton(icon: const Icon(Icons.delete, color: Colors.red), onPressed: () => _confermaEliminazioneIdrante(idrante)),
+                      ],
+                    ),
+                    onTap: () => _mostraDettaglioIdrante(idrante, dist),
                   ),
-            const SizedBox(height: 20),
+                );
+              },
+            ),
           ],
         ),
       ),
@@ -1076,7 +630,6 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
   }
 }
 
-// Widget grafico dedicato alla Vasca AIB di Riserva
 class IconaVascaAIB extends StatelessWidget {
   final double size;
   const IconaVascaAIB({super.key, this.size = 20});
@@ -1089,24 +642,15 @@ class IconaVascaAIB extends StatelessWidget {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: Colors.blue[300],
-        border: Border.all(
-          color: Colors.red[700]!,
-          width: 3.0,
-        ),
+        border: Border.all(color: Colors.red[700]!, width: 2.5),
       ),
-      child: Center(
-        child: Icon(
-          Icons.waves,
-          size: size * 0.55,
-          color: Colors.white,
-        ),
-      ),
+      child: Center(child: Icon(Icons.waves, size: size * 0.5, color: Colors.white)),
     );
   }
 }
 
 class PuntoIdrico {
-  final String id;
+  String id;
   final String codice;
   final String tipo;
   final String ubicazione;
@@ -1129,4 +673,33 @@ class PuntoIdrico {
     this.hasUni45 = false,
     this.hasUni70 = false,
   });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'codice': codice,
+      'tipo': tipo,
+      'ubicazione': ubicazione,
+      'stato': stato,
+      'latitudine': latitudine,
+      'longitudine': longitudine,
+      'mezziCompatibili': mezziCompatibili,
+      'hasUni45': hasUni45,
+      'hasUni70': hasUni70,
+    };
+  }
+
+  factory PuntoIdrico.fromMap(String id, Map<String, dynamic> map) {
+    return PuntoIdrico(
+      id: id,
+      codice: map['codice'] ?? '',
+      tipo: map['tipo'] ?? '',
+      ubicazione: map['ubicazione'] ?? '',
+      stato: map['stato'] ?? 'Funzionante',
+      latitudine: (map['latitudine'] as num).toDouble(),
+      longitudine: (map['longitudine'] as num).toDouble(),
+      mezziCompatibili: List<String>.from(map['mezziCompatibili'] ?? []),
+      hasUni45: map['hasUni45'] ?? false,
+      hasUni70: map['hasUni70'] ?? false,
+    );
+  }
 }
