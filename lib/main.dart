@@ -39,7 +39,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   // DATI SUPABASE SQUADRA AIB
   final String _supabaseUrl = 'https://srielrbjejggxvpeshfd.supabase.co';
-  final String _supabaseApiKey = 'sb_publishable_Uz96ih6QR0FVRzJyV3HjqA_RtpIOSN7';
+  final String _supabaseApiKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNyaWVscmJqZWpnZ3h2cGVzaGZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODczMjcwMzAsImV4cCI6MjEwMjkwMzAzMH0.3nX0meQZYEAIMEvuFSZVP0CTvgbTKES5bS5gDRDFa-c';
 
   final String _passwordEliminazione = 'AIB2026';
   String _filtroSelezionato = 'Tutti';
@@ -132,9 +132,11 @@ class _HomePageState extends State<HomePage> {
       );
 
       if (response.statusCode == 201 || response.statusCode == 200) {
-        final List<dynamic> data = json.decode(response.body);
-        if (data.isNotEmpty && data[0]['id'] != null) {
+        final dynamic data = json.decode(response.body);
+        if (data is List && data.isNotEmpty) {
           idrante.id = data[0]['id'].toString();
+        } else if (data is Map && data['id'] != null) {
+          idrante.id = data['id'].toString();
         }
         setState(() {
           listaIdranti.add(idrante);
