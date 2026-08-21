@@ -710,14 +710,14 @@ class PuntoIdrico {
       'stato': stato,
       'latitudine': latitudine,
       'longitudine': longitudine,
-      'mezziCompatibili': mezziCompatibili.join(','),
-      'hasUni45': hasUni45,
-      'hasUni70': hasUni70,
+      'mezzicompatibili': mezziCompatibili.join(','),
+      'hasuni45': hasUni45,
+      'hasuni70': hasUni70,
     };
   }
 
   factory PuntoIdrico.fromMap(Map<String, dynamic> map) {
-    String mezziRaw = map['mezziCompatibili']?.toString() ?? '';
+    String mezziRaw = map['mezzicompatibili']?.toString() ?? '';
     List<String> mezzi = mezziRaw.isNotEmpty ? mezziRaw.split(',') : [];
 
     return PuntoIdrico(
@@ -729,8 +729,8 @@ class PuntoIdrico {
       latitudine: map['latitudine'] != null ? (map['latitudine'] as num).toDouble() : 0.0,
       longitudine: map['longitudine'] != null ? (map['longitudine'] as num).toDouble() : 0.0,
       mezziCompatibili: mezzi,
-      hasUni45: map['hasUni45'] == true,
-      hasUni70: map['hasUni70'] == true,
+      hasUni45: map['hasuni45'] == true,
+      hasUni70: map['hasuni70'] == true,
     );
   }
 }
