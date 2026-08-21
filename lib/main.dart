@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -37,8 +38,10 @@ class _HomePageState extends State<HomePage> {
   final String _passwordEliminazione = 'AIB2026';
   String _filtroSelezionato = 'Tutti';
 
+  // Coordinate di default (Parco del Ticino)
   double posizioneCorrenteLat = 45.6512;
   double posizioneCorrenteLng = 8.7123;
+  bool _caricamentoGPS = false;
 
   final MapController _mapController = MapController();
 
@@ -113,6 +116,12 @@ class _HomePageState extends State<HomePage> {
   final _passwordController = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    _ottieniPosizioneGPSReale();
+  }
+
+  @override
   void dispose() {
     _codiceController.dispose();
     _ubicazioneController.dispose();
@@ -120,6 +129,59 @@ class _HomePageState extends State<HomePage> {
     _lngController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  // Rileva la posizione reale e aggiorna sia il marker che la vista della mappa
+  Future<void> _ottieniPosizioneGPSReale() async {
+    setState(() => _caricamentoGPS = true);
+
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      _mostraMessaggio('Attiva il GPS del dispositivo per rilevare la posizione.');
+      setState(() => _caricamentoGPS = false);
+      return;
+    }
+
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        _mostraMessaggio('Permessi GPS negati.');
+        setState(() => _caricamentoGPS = false);
+        return;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      _mostraMessaggio('I permessi GPS sono disabilitati nelle impostazioni.');
+      setState(() => _caricamentoGPS = false);
+      return;
+    }
+
+    try {
+      Position pos = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      setState(() {
+        posizioneCorrenteLat = pos.latitude;
+        posizioneCorrenteLng = pos.longitude;
+        _caricamentoGPS = false;
+      });
+
+      _mapController.move(LatLng(posizioneCorrenteLat, posizioneCorrenteLng), 14.0);
+      _mostraMessaggio('Posizione reale della squadra aggiornata!');
+    } catch (e) {
+      _mostraMessaggio('Errore lettura GPS: $e');
+      setState(() => _caricamentoGPS = false);
+    }
+  }
+
+  void _mostraMessaggio(String testo) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(testo), duration: const Duration(seconds: 2)),
+    );
   }
 
   String _generaCodiceProgressivo(String tipo) {
@@ -138,21 +200,6 @@ class _HomePageState extends State<HomePage> {
     String numeroFormattato = conteggio.toString().padLeft(2, '0');
 
     return '$prefisso-$numeroFormattato';
-  }
-
-  void _simulaSpostamentoGPS() {
-    setState(() {
-      posizioneCorrenteLat += 0.003;
-      posizioneCorrenteLng += 0.003;
-    });
-    _mapController.move(LatLng(posizioneCorrenteLat, posizioneCorrenteLng), 13.0);
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Posizione squadra aggiornata (Simulazione GPS)'),
-        duration: Duration(seconds: 2),
-      ),
-    );
   }
 
   double _calcolaDistanzaKm(double lat1, double lon1, double lat2, double lon2) {
@@ -219,14 +266,7 @@ class _HomePageState extends State<HomePage> {
         await launchUrl(geoUrl);
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Impossibile aprire il navigatore: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      _mostraMessaggio('Impossibile aprire il navigatore: $e');
     }
   }
 
@@ -234,13 +274,7 @@ class _HomePageState extends State<HomePage> {
     setState(() {
       idrante.stato = nuovoStato;
     });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Stato idrante ${idrante.codice} aggiornato in: $nuovoStato'),
-        backgroundColor: _getColoreStato(nuovoStato),
-        duration: const Duration(seconds: 2),
-      ),
-    );
+    _mostraMessaggio('Stato idrante ${idrante.codice} aggiornato in: $nuovoStato');
   }
 
   void _confermaEliminazioneIdrante(PuntoIdrico idrante) {
@@ -284,19 +318,9 @@ class _HomePageState extends State<HomePage> {
                   listaIdranti.removeWhere((item) => item.id == idrante.id);
                 });
                 Navigator.of(ctx).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Idrante ${idrante.codice} eliminato con successo.'),
-                    backgroundColor: Colors.orange[800],
-                  ),
-                );
+                _mostraMessaggio('Idrante ${idrante.codice} eliminato con successo.');
               } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Password errata! Eliminazione annullata.'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
+                _mostraMessaggio('Password errata! Eliminazione annullata.');
               }
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
@@ -661,11 +685,20 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.my_location),
-            onPressed: _simulaSpostamentoGPS,
-            tooltip: 'Simula Spostamento GPS',
-          ),
+          _caricamentoGPS
+              ? const Padding(
+                  padding: EdgeInsets.all(12.0),
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                  ),
+                )
+              : IconButton(
+                  icon: const Icon(Icons.my_location),
+                  onPressed: _ottieniPosizioneGPSReale,
+                  tooltip: 'Aggiorna Posizione GPS Reale',
+                ),
         ],
       ),
       body: SingleChildScrollView(
@@ -689,14 +722,14 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
                   Text(
-                    'GPS Squadra: ${posizioneCorrenteLat.toStringAsFixed(3)}, ${posizioneCorrenteLng.toStringAsFixed(3)}',
+                    'GPS Squadra: ${posizioneCorrenteLat.toStringAsFixed(4)}, ${posizioneCorrenteLng.toStringAsFixed(4)}',
                     style: const TextStyle(color: Colors.white70, fontSize: 11),
                   ),
                 ],
               ),
             ),
 
-            // Sezione Mappa Integrata
+            // SEZIONE MAPPA INTEGRATA IN HOMEPAGE
             SizedBox(
               height: 240,
               width: double.infinity,
@@ -704,7 +737,7 @@ class _HomePageState extends State<HomePage> {
                 mapController: _mapController,
                 options: MapOptions(
                   initialCenter: LatLng(posizioneCorrenteLat, posizioneCorrenteLng),
-                  initialZoom: 13.0,
+                  initialZoom: 13.5,
                 ),
                 children: [
                   TileLayer(
@@ -713,7 +746,7 @@ class _HomePageState extends State<HomePage> {
                   ),
                   MarkerLayer(
                     markers: [
-                      // Posizione Squadra
+                      // Marker per la Posizione Reale della Squadra AIB
                       Marker(
                         point: LatLng(posizioneCorrenteLat, posizioneCorrenteLng),
                         width: 40,
@@ -724,7 +757,7 @@ class _HomePageState extends State<HomePage> {
                           size: 32,
                         ),
                       ),
-                      // Marcatori Punti Idrici
+                      // Marcatori Punti Idrici Censiti
                       ...idrantiMostrati.map((idrante) {
                         bool isGuasto = idrante.stato == 'Non Funzionante';
                         Color coloreMarker = isGuasto
