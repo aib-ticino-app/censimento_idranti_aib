@@ -37,7 +37,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  // Il tuo URL reale di Firebase Realtime Database
+  // URL Firebase Realtime Database
   final String _firebaseUrl = 'https://idranti-aib-default-rtdb.europe-west1.firebasedatabase.app';
 
   final String _passwordEliminazione = 'AIB2026';
@@ -97,7 +97,9 @@ class _HomePageState extends State<HomePage> {
         final Map<String, dynamic> data = json.decode(response.body);
         List<PuntoIdrico> caricati = [];
         data.forEach((key, item) {
-          caricati.add(PuntoIdrico.fromMap(key, item));
+          if (item is Map) {
+            caricati.add(PuntoIdrico.fromMap(key, Map<String, dynamic>.from(item)));
+          }
         });
         setState(() {
           listaIdranti = caricati;
@@ -108,7 +110,7 @@ class _HomePageState extends State<HomePage> {
         });
       }
     } catch (e) {
-      _mostraMessaggio('Errore connessione Cloud Firebase.');
+      _mostraMessaggio('Errore di connessione durante la lettura da Firebase.');
     } finally {
       setState(() => _caricamentoCloud = false);
     }
@@ -116,21 +118,27 @@ class _HomePageState extends State<HomePage> {
 
   // --- SALVATAGGIO NUOVO IDRANTE SU FIREBASE ---
   Future<void> _salvaIdranteSuFirebase(PuntoIdrico idrante) async {
+    setState(() => _caricamentoCloud = true);
     try {
       final response = await http.post(
         Uri.parse('$_firebaseUrl/idranti.json'),
+        headers: {'Content-Type': 'application/json'},
         body: json.encode(idrante.toMap()),
       );
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 || response.statusCode == 201) {
         final Map<String, dynamic> data = json.decode(response.body);
-        idrante.id = data['name'];
+        idrante.id = data['name'] ?? DateTime.now().millisecondsSinceEpoch.toString();
         setState(() {
           listaIdranti.add(idrante);
         });
-        _mostraMessaggio('Punto idrico salvato nel Cloud!');
+        _mostraMessaggio('Punto idrico salvato con successo nel Cloud!');
+      } else {
+        _mostraMessaggio('Errore dal server durante il salvataggio.');
       }
     } catch (e) {
-      _mostraMessaggio('Impossibile salvare su Firebase.');
+      _mostraMessaggio('Impossibile salvare il punto idrico su Firebase.');
+    } finally {
+      setState(() => _caricamentoCloud = false);
     }
   }
 
@@ -142,11 +150,12 @@ class _HomePageState extends State<HomePage> {
     try {
       await http.patch(
         Uri.parse('$_firebaseUrl/idranti/${idrante.id}.json'),
+        headers: {'Content-Type': 'application/json'},
         body: json.encode({'stato': nuovoStato}),
       );
       _mostraMessaggio('Stato aggiornato nel Cloud: $nuovoStato');
     } catch (e) {
-      _mostraMessaggio('Errore aggiornamento Cloud.');
+      _mostraMessaggio('Errore nell\'aggiornamento dello stato su Firebase.');
     }
   }
 
@@ -388,6 +397,7 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
   void _mostraDialogoNuovoIdrante() {
     _latController.text = posizioneCorrenteLat.toStringAsFixed(4);
     _lngController.text = posizioneCorrenteLng.toStringAsFixed(4);
+    _ubicazioneController.clear();
     String tipoSelezionato = tipologieDisponibili.first;
     String statoSelezionato = 'Funzionante';
     bool hasUni45 = true;
@@ -457,7 +467,10 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
             TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Annulla')),
             ElevatedButton(
               onPressed: () {
-                if (_codiceController.text.isEmpty || _ubicazioneController.text.isEmpty) return;
+                if (_codiceController.text.isEmpty || _ubicazioneController.text.isEmpty) {
+                  _mostraMessaggio('Inserisci codice e ubicazione prima di salvare.');
+                  return;
+                }
 
                 List<String> selezionati = mezziSelezionati.entries.where((e) => e.value).map((e) => e.key).toList();
 
@@ -691,15 +704,15 @@ class PuntoIdrico {
   factory PuntoIdrico.fromMap(String id, Map<String, dynamic> map) {
     return PuntoIdrico(
       id: id,
-      codice: map['codice'] ?? '',
-      tipo: map['tipo'] ?? '',
-      ubicazione: map['ubicazione'] ?? '',
-      stato: map['stato'] ?? 'Funzionante',
-      latitudine: (map['latitudine'] as num).toDouble(),
-      longitudine: (map['longitudine'] as num).toDouble(),
-      mezziCompatibili: List<String>.from(map['mezziCompatibili'] ?? []),
-      hasUni45: map['hasUni45'] ?? false,
-      hasUni70: map['hasUni70'] ?? false,
+      codice: map['codice']?.toString() ?? '',
+      tipo: map['tipo']?.toString() ?? '',
+      ubicazione: map['ubicazione']?.toString() ?? '',
+      stato: map['stato']?.toString() ?? 'Funzionante',
+      latitudine: map['latitudine'] != null ? (map['latitudine'] as num).toDouble() : 0.0,
+      longitudine: map['longitudine'] != null ? (map['longitudine'] as num).toDouble() : 0.0,
+      mezziCompatibili: map['mezziCompatibili'] != null ? List<String>.from(map['mezziCompatibili']) : [],
+      hasUni45: map['hasUni45'] == true,
+      hasUni70: map['hasUni70'] == true,
     );
   }
 }
