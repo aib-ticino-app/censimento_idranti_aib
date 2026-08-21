@@ -1,7 +1,7 @@
+import 'dart:html' as html;
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -118,7 +118,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    _ottieniPosizioneGPSReale();
+    _ottieniPosizioneGPSNativaWeb();
   }
 
   @override
@@ -131,68 +131,36 @@ class _HomePageState extends State<HomePage> {
     super.dispose();
   }
 
-  // Funzione GPS con Fallback per massima compatibilità Web
-  Future<void> _ottieniPosizioneGPSReale() async {
+  // Rilevamento GPS diretto per Web tramite API nativa del browser
+  void _ottieniPosizioneGPSNativaWeb() {
     setState(() => _caricamentoGPS = true);
 
-    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      _mostraMessaggio('Attiva il GPS del dispositivo/browser.');
-      setState(() => _caricamentoGPS = false);
-      return;
-    }
+    if (html.window.navigator.geolocation != null) {
+      html.window.navigator.geolocation!.getCurrentPosition().then((pos) {
+        if (pos.coords != null) {
+          setState(() {
+            posizioneCorrenteLat = pos.coords!.latitude!.toDouble();
+            posizioneCorrenteLng = pos.coords!.longitude!.toDouble();
+            _caricamentoGPS = false;
+          });
 
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        _mostraMessaggio('Permessi GPS negati dal browser.');
+          _mapController.move(LatLng(posizioneCorrenteLat, posizioneCorrenteLng), 14.0);
+          _mostraMessaggio('Posizione reale aggiornata!');
+        }
+      }).catchError((error) {
         setState(() => _caricamentoGPS = false);
-        return;
-      }
-    }
-
-    if (permission == LocationPermission.deniedForever) {
-      _mostraMessaggio('Permessi GPS bloccati. Abilitali nelle impostazioni del browser.');
-      setState(() => _caricamentoGPS = false);
-      return;
-    }
-
-    try {
-      Position pos = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.medium,
-        timeLimit: const Duration(seconds: 8),
-      );
-
-      setState(() {
-        posizioneCorrenteLat = pos.latitude;
-        posizioneCorrenteLng = pos.longitude;
-        _caricamentoGPS = false;
+        _mostraMessaggio('Permesso GPS negato o segnale non disponibile nel browser.');
       });
-
-      _mapController.move(LatLng(posizioneCorrenteLat, posizioneCorrenteLng), 14.0);
-      _mostraMessaggio('Posizione reale aggiornata!');
-    } catch (e) {
-      Position? lastPos = await Geolocator.getLastKnownPosition();
-      if (lastPos != null) {
-        setState(() {
-          posizioneCorrenteLat = lastPos.latitude;
-          posizioneCorrenteLng = lastPos.longitude;
-          _caricamentoGPS = false;
-        });
-        _mapController.move(LatLng(posizioneCorrenteLat, posizioneCorrenteLng), 14.0);
-        _mostraMessaggio('Recuperata ultima posizione nota!');
-      } else {
-        _mostraMessaggio('Impossibile rilevare il GPS: assicurati che sia attivo il segnale.');
-        setState(() => _caricamentoGPS = false);
-      }
+    } else {
+      setState(() => _caricamentoGPS = false);
+      _mostraMessaggio('Geolocalizzazione non supportata da questo browser.');
     }
   }
 
   void _mostraMessaggio(String testo) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(testo), duration: const Duration(seconds: 2)),
+      SnackBar(content: Text(testo), duration: const Duration(seconds: 3)),
     );
   }
 
@@ -708,8 +676,8 @@ class _HomePageState extends State<HomePage> {
                 )
               : IconButton(
                   icon: const Icon(Icons.my_location),
-                  onPressed: _ottieniPosizioneGPSReale,
-                  tooltip: 'Aggiorna Posizione GPS Reale',
+                  onPressed: _ottieniPosizioneGPSNativaWeb,
+                  tooltip: 'Aggiorna Posizione GPS',
                 ),
         ],
       ),
@@ -741,7 +709,7 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
 
-            // Mappa Integrata in Homepage
+            // Sezione Mappa Integrata
             SizedBox(
               height: 240,
               width: double.infinity,
@@ -758,7 +726,7 @@ class _HomePageState extends State<HomePage> {
                   ),
                   MarkerLayer(
                     markers: [
-                      // Posizione Squadra GPS
+                      // Posizione Squadra
                       Marker(
                         point: LatLng(posizioneCorrenteLat, posizioneCorrenteLng),
                         width: 40,
