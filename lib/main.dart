@@ -32,13 +32,9 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  // Password predefinita per l'eliminazione
-  final String _passwordEliminazione = 'Ticino-2026';
-
-  // Stato per il filtro di visualizzazione selezionato: 'Tutti', 'Idranti', 'Vasche', 'Prese d'Acqua'
+  final String _passwordEliminazione = 'AIB2026';
   String _filtroSelezionato = 'Tutti';
 
-  // Coordinate simulate della squadra AIB (Parco del Ticino)
   double posizioneCorrenteLat = 45.6512;
   double posizioneCorrenteLng = 8.7123;
 
@@ -65,6 +61,8 @@ class _HomePageState extends State<HomePage> {
       latitudine: 45.6520,
       longitudine: 8.7130,
       mezziCompatibili: ['Pickup Modulo AIB', 'Autobotte AIB'],
+      hasUni45: true,
+      hasUni70: true,
     ),
     PuntoIdrico(
       id: '2',
@@ -75,6 +73,8 @@ class _HomePageState extends State<HomePage> {
       latitudine: 45.6589,
       longitudine: 8.7201,
       mezziCompatibili: ['Pickup Modulo AIB', 'Elicottero / Bambi Bucket'],
+      hasUni45: false,
+      hasUni70: true,
     ),
     PuntoIdrico(
       id: '3',
@@ -85,6 +85,8 @@ class _HomePageState extends State<HomePage> {
       latitudine: 45.6480,
       longitudine: 8.7050,
       mezziCompatibili: ['Pickup Modulo AIB', 'Autobotte AIB'],
+      hasUni45: true,
+      hasUni70: false,
     ),
     PuntoIdrico(
       id: '4',
@@ -95,6 +97,8 @@ class _HomePageState extends State<HomePage> {
       latitudine: 45.6700,
       longitudine: 8.7300,
       mezziCompatibili: ['Elicottero / Bambi Bucket'],
+      hasUni45: false,
+      hasUni70: false,
     ),
   ];
 
@@ -134,8 +138,8 @@ class _HomePageState extends State<HomePage> {
 
   void _simulaSpostamentoGPS() {
     setState(() {
-      posizioneCorrenteLat += 0.005;
-      posizioneCorrenteLng += 0.005;
+      posizioneCorrenteLat += 0.003;
+      posizioneCorrenteLng += 0.003;
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -155,7 +159,6 @@ class _HomePageState extends State<HomePage> {
   }
 
   List<PuntoIdrico> get _idrantiFiltratiEVicini {
-    // Applicazione del filtro selezionato dall'utente
     List<PuntoIdrico> listaFiltrata = listaIdranti.where((item) {
       if (_filtroSelezionato == 'Idranti') {
         return item.tipo.contains('Idrante');
@@ -164,10 +167,9 @@ class _HomePageState extends State<HomePage> {
       } else if (_filtroSelezionato == 'Prese d\'Acqua') {
         return item.tipo.contains('Presa');
       }
-      return true; // Per 'Tutti'
+      return true;
     }).toList();
 
-    // Ordinamento per distanza dalla squadra GPS
     listaFiltrata.sort((a, b) {
       double distA = _calcolaDistanzaKm(
           posizioneCorrenteLat, posizioneCorrenteLng, a.latitudine, a.longitudine);
@@ -189,6 +191,15 @@ class _HomePageState extends State<HomePage> {
       default:
         return Colors.green[700]!;
     }
+  }
+
+  IconData _getIconaPerTipo(String tipo) {
+    if (tipo.contains('Vasca')) {
+      return Icons.water_damage;
+    } else if (tipo.contains('Presa')) {
+      return Icons.waves;
+    }
+    return Icons.fire_hydrant_alt;
   }
 
   Future<void> _avviaNavigatoreReale(double lat, double lng) async {
@@ -232,8 +243,8 @@ class _HomePageState extends State<HomePage> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Row(
-          children: const [
+        title: const Row(
+          children: [
             Icon(Icons.security, color: Colors.red),
             SizedBox(width: 8),
             Text('Protezione Eliminazione'),
@@ -297,7 +308,7 @@ class _HomePageState extends State<HomePage> {
       builder: (ctx) => AlertDialog(
         title: Row(
           children: [
-            Icon(Icons.info_outline, color: Colors.blue[800]),
+            Icon(_getIconaPerTipo(idrante.tipo), color: Colors.blue[800]),
             const SizedBox(width: 8),
             Expanded(child: Text('Dettaglio ${idrante.codice}')),
           ],
@@ -331,7 +342,25 @@ class _HomePageState extends State<HomePage> {
                 style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
             const SizedBox(height: 6),
             Text('Coordinate GPS: ${idrante.latitudine}, ${idrante.longitudine}'),
-            const Divider(height: 20),
+            const Divider(height: 16),
+            const Text('Attacchi / Diametri Disponibili:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Chip(
+                  avatar: Icon(idrante.hasUni45 ? Icons.check : Icons.close,
+                      color: idrante.hasUni45 ? Colors.green : Colors.grey, size: 16),
+                  label: const Text('UNI 45', style: TextStyle(fontSize: 11)),
+                ),
+                const SizedBox(width: 8),
+                Chip(
+                  avatar: Icon(idrante.hasUni70 ? Icons.check : Icons.close,
+                      color: idrante.hasUni70 ? Colors.green : Colors.grey, size: 16),
+                  label: const Text('UNI 70', style: TextStyle(fontSize: 11)),
+                ),
+              ],
+            ),
+            const Divider(height: 16),
             const Text('Mezzi Accessibili / Compatibili:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
             const SizedBox(height: 4),
             idrante.mezziCompatibili.isNotEmpty
@@ -380,7 +409,10 @@ class _HomePageState extends State<HomePage> {
     _lngController.text = posizioneCorrenteLng.toStringAsFixed(4);
     String tipoSelezionato = tipologieDisponibili.first;
     String statoSelezionato = 'Funzionante';
-    
+
+    bool hasUni45 = true;
+    bool hasUni70 = true;
+
     _codiceController.text = _generaCodiceProgressivo(tipoSelezionato);
 
     Map<String, bool> mezziSelezionati = {
@@ -398,7 +430,7 @@ class _HomePageState extends State<HomePage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 DropdownButtonFormField<String>(
-                  value: tipoSelezionato,
+                  initialValue: tipoSelezionato,
                   decoration: const InputDecoration(labelText: 'Tipologia'),
                   items: tipologieDisponibili.map((tipo) {
                     return DropdownMenuItem(
@@ -425,7 +457,7 @@ class _HomePageState extends State<HomePage> {
                 ),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
-                  value: statoSelezionato,
+                  initialValue: statoSelezionato,
                   decoration: const InputDecoration(labelText: 'Stato Idrante'),
                   items: ['Funzionante', 'Non Funzionante', 'Da Verificare'].map((st) {
                     return DropdownMenuItem(
@@ -467,7 +499,32 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
+                const Text(
+                  'Diametro Attacchi Disponibili:',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                ),
+                CheckboxListTile(
+                  title: const Text('Attacco UNI 45', style: TextStyle(fontSize: 13)),
+                  value: hasUni45,
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  controlAffinity: ListTileControlAffinity.leading,
+                  onChanged: (val) {
+                    setDialogState(() => hasUni45 = val ?? false);
+                  },
+                ),
+                CheckboxListTile(
+                  title: const Text('Attacco UNI 70', style: TextStyle(fontSize: 13)),
+                  value: hasUni70,
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  controlAffinity: ListTileControlAffinity.leading,
+                  onChanged: (val) {
+                    setDialogState(() => hasUni70 = val ?? false);
+                  },
+                ),
+                const SizedBox(height: 8),
                 const Text(
                   'Mezzi Compatibili:',
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
@@ -516,6 +573,8 @@ class _HomePageState extends State<HomePage> {
                       latitudine: double.tryParse(_latController.text) ?? posizioneCorrenteLat,
                       longitudine: double.tryParse(_lngController.text) ?? posizioneCorrenteLng,
                       mezziCompatibili: selezionati,
+                      hasUni45: hasUni45,
+                      hasUni70: hasUni70,
                     ),
                   );
                 });
@@ -609,7 +668,7 @@ class _HomePageState extends State<HomePage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              height: 70,
+              height: 50,
               width: double.infinity,
               color: Colors.blue[900],
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -620,12 +679,12 @@ class _HomePageState extends State<HomePage> {
                     'Parco Ticino - Volontari AIB',
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 15,
+                      fontSize: 14,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   Text(
-                    'GPS: ${posizioneCorrenteLat.toStringAsFixed(3)}, ${posizioneCorrenteLng.toStringAsFixed(3)}',
+                    'GPS Squadra: ${posizioneCorrenteLat.toStringAsFixed(3)}, ${posizioneCorrenteLng.toStringAsFixed(3)}',
                     style: const TextStyle(color: Colors.white70, fontSize: 11),
                   ),
                 ],
@@ -654,7 +713,6 @@ class _HomePageState extends State<HomePage> {
             ),
             const SizedBox(height: 8),
 
-            // Barra dei Filtri Selezionabili
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -669,7 +727,7 @@ class _HomePageState extends State<HomePage> {
             ),
 
             const SizedBox(height: 8),
-            
+
             idrantiMostrati.isEmpty
                 ? const Padding(
                     padding: EdgeInsets.all(32.0),
@@ -714,11 +772,7 @@ class _HomePageState extends State<HomePage> {
                                           ? Colors.red[100]
                                           : (idrante.stato == 'Da Verificare' ? Colors.orange[100] : Colors.blue[100]),
                                       child: Icon(
-                                        isGuasto
-                                            ? Icons.warning_amber_rounded
-                                            : (idrante.tipo.contains('Vasca') || idrante.tipo.contains('Presa')
-                                                ? Icons.waves
-                                                : Icons.water_drop),
+                                        _getIconaPerTipo(idrante.tipo),
                                         color: isGuasto
                                             ? Colors.red[800]
                                             : (idrante.stato == 'Da Verificare' ? Colors.orange[900] : Colors.blue[800]),
@@ -766,6 +820,31 @@ class _HomePageState extends State<HomePage> {
                                               fontWeight: FontWeight.bold,
                                               color: isGuasto ? Colors.red[700] : Colors.blueGrey,
                                             ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Row(
+                                            children: [
+                                              if (idrante.hasUni45)
+                                                Container(
+                                                  margin: const EdgeInsets.only(right: 4),
+                                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.grey[200],
+                                                    borderRadius: BorderRadius.circular(3),
+                                                  ),
+                                                  child: const Text('UNI 45', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                                                ),
+                                              if (idrante.hasUni70)
+                                                Container(
+                                                  margin: const EdgeInsets.only(right: 4),
+                                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.grey[200],
+                                                    borderRadius: BorderRadius.circular(3),
+                                                  ),
+                                                  child: const Text('UNI 70', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                                                ),
+                                            ],
                                           ),
                                           if (idrante.mezziCompatibili.isNotEmpty) ...[
                                             const SizedBox(height: 4),
@@ -850,6 +929,8 @@ class PuntoIdrico {
   final double latitudine;
   final double longitudine;
   final List<String> mezziCompatibili;
+  final bool hasUni45;
+  final bool hasUni70;
 
   PuntoIdrico({
     required this.id,
@@ -860,5 +941,7 @@ class PuntoIdrico {
     required this.latitudine,
     required this.longitudine,
     this.mezziCompatibili = const [],
+    this.hasUni45 = false,
+    this.hasUni70 = false,
   });
 }
