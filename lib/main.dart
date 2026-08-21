@@ -1,5 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 void main() {
@@ -37,6 +39,8 @@ class _HomePageState extends State<HomePage> {
 
   double posizioneCorrenteLat = 45.6512;
   double posizioneCorrenteLng = 8.7123;
+
+  final MapController _mapController = MapController();
 
   final List<String> mezziDisponibili = [
     'Pickup Modulo AIB',
@@ -141,6 +145,7 @@ class _HomePageState extends State<HomePage> {
       posizioneCorrenteLat += 0.003;
       posizioneCorrenteLng += 0.003;
     });
+    _mapController.move(LatLng(posizioneCorrenteLat, posizioneCorrenteLng), 13.0);
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -690,6 +695,72 @@ class _HomePageState extends State<HomePage> {
                 ],
               ),
             ),
+
+            // Sezione Mappa Integrata
+            SizedBox(
+              height: 240,
+              width: double.infinity,
+              child: FlutterMap(
+                mapController: _mapController,
+                options: MapOptions(
+                  initialCenter: LatLng(posizioneCorrenteLat, posizioneCorrenteLng),
+                  initialZoom: 13.0,
+                ),
+                children: [
+                  TileLayer(
+                    urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    userAgentPackageName: 'com.example.idranti_aib',
+                  ),
+                  MarkerLayer(
+                    markers: [
+                      // Posizione Squadra
+                      Marker(
+                        point: LatLng(posizioneCorrenteLat, posizioneCorrenteLng),
+                        width: 40,
+                        height: 40,
+                        child: const Icon(
+                          Icons.navigation,
+                          color: Colors.blueAccent,
+                          size: 32,
+                        ),
+                      ),
+                      // Marcatori Punti Idrici
+                      ...idrantiMostrati.map((idrante) {
+                        bool isGuasto = idrante.stato == 'Non Funzionante';
+                        Color coloreMarker = isGuasto
+                            ? Colors.red[800]!
+                            : (idrante.stato == 'Da Verificare' ? Colors.orange[800]! : Colors.green[800]!);
+
+                        return Marker(
+                          point: LatLng(idrante.latitudine, idrante.longitudine),
+                          width: 40,
+                          height: 40,
+                          child: GestureDetector(
+                            onTap: () {
+                              double dist = _calcolaDistanzaKm(
+                                  posizioneCorrenteLat,
+                                  posizioneCorrenteLng,
+                                  idrante.latitudine,
+                                  idrante.longitudine);
+                              _mostraDettaglioIdrante(idrante, dist);
+                            },
+                            child: CircleAvatar(
+                              backgroundColor: coloreMarker,
+                              child: Icon(
+                                _getIconaPerTipo(idrante.tipo),
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                            ),
+                          ),
+                        );
+                      }),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
             const SizedBox(height: 12),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
