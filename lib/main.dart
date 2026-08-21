@@ -93,24 +93,29 @@ class _HomePageState extends State<HomePage> {
     setState(() => _caricamentoCloud = true);
     try {
       final response = await http.get(Uri.parse('$_firebaseUrl/idranti.json'));
-      if (response.statusCode == 200 && response.body != 'null') {
-        final Map<String, dynamic> data = json.decode(response.body);
-        List<PuntoIdrico> caricati = [];
-        data.forEach((key, item) {
-          if (item is Map) {
-            caricati.add(PuntoIdrico.fromMap(key, Map<String, dynamic>.from(item)));
-          }
-        });
-        setState(() {
-          listaIdranti = caricati;
-        });
+      if (response.statusCode == 200) {
+        if (response.body != 'null') {
+          final Map<String, dynamic> data = json.decode(response.body);
+          List<PuntoIdrico> caricati = [];
+          data.forEach((key, item) {
+            if (item is Map) {
+              caricati.add(PuntoIdrico.fromMap(key, Map<String, dynamic>.from(item)));
+            }
+          });
+          setState(() {
+            listaIdranti = caricati;
+          });
+          _mostraMessaggio('Dati sincronizzati con il Cloud!', isError: false);
+        } else {
+          setState(() {
+            listaIdranti = [];
+          });
+        }
       } else {
-        setState(() {
-          listaIdranti = [];
-        });
+        _mostraMessaggio('Errore ${response.statusCode}: Verifica le regole su Firebase.', isError: true);
       }
     } catch (e) {
-      _mostraMessaggio('Errore di connessione durante la lettura da Firebase.');
+      _mostraMessaggio('Impossibile connettersi a Firebase.', isError: true);
     } finally {
       setState(() => _caricamentoCloud = false);
     }
@@ -125,18 +130,19 @@ class _HomePageState extends State<HomePage> {
         headers: {'Content-Type': 'application/json'},
         body: json.encode(idrante.toMap()),
       );
+
       if (response.statusCode == 200 || response.statusCode == 201) {
         final Map<String, dynamic> data = json.decode(response.body);
         idrante.id = data['name'] ?? DateTime.now().millisecondsSinceEpoch.toString();
         setState(() {
           listaIdranti.add(idrante);
         });
-        _mostraMessaggio('Punto idrico salvato con successo nel Cloud!');
+        _mostraMessaggio('Punto idrico salvato nel Cloud!', isError: false);
       } else {
-        _mostraMessaggio('Errore dal server durante il salvataggio.');
+        _mostraMessaggio('Errore ${response.statusCode} nel salvataggio su Firebase.', isError: true);
       }
     } catch (e) {
-      _mostraMessaggio('Impossibile salvare il punto idrico su Firebase.');
+      _mostraMessaggio('Errore di rete durante il salvataggio: $e', isError: true);
     } finally {
       setState(() => _caricamentoCloud = false);
     }
@@ -153,9 +159,9 @@ class _HomePageState extends State<HomePage> {
         headers: {'Content-Type': 'application/json'},
         body: json.encode({'stato': nuovoStato}),
       );
-      _mostraMessaggio('Stato aggiornato nel Cloud: $nuovoStato');
+      _mostraMessaggio('Stato aggiornato nel Cloud!', isError: false);
     } catch (e) {
-      _mostraMessaggio('Errore nell\'aggiornamento dello stato su Firebase.');
+      _mostraMessaggio('Errore aggiornamento Cloud.', isError: true);
     }
   }
 
@@ -166,9 +172,9 @@ class _HomePageState extends State<HomePage> {
       setState(() {
         listaIdranti.removeWhere((item) => item.id == idrante.id);
       });
-      _mostraMessaggio('Punto idrico eliminato dal Cloud.');
+      _mostraMessaggio('Punto idrico eliminato dal Cloud.', isError: false);
     } catch (e) {
-      _mostraMessaggio('Errore durante l\'eliminazione da Firebase.');
+      _mostraMessaggio('Errore eliminazione Firebase.', isError: true);
     }
   }
 
@@ -192,10 +198,14 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  void _mostraMessaggio(String testo) {
+  void _mostraMessaggio(String testo, {bool isError = false}) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(testo), duration: const Duration(seconds: 3)),
+      SnackBar(
+        content: Text(testo),
+        backgroundColor: isError ? Colors.red[800] : Colors.green[800],
+        duration: const Duration(seconds: 4),
+      ),
     );
   }
 
@@ -326,7 +336,7 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
                 Navigator.of(ctx).pop();
                 _eliminaIdranteDaFirebase(idrante);
               } else {
-                _mostraMessaggio('Password errata!');
+                _mostraMessaggio('Password errata!', isError: true);
               }
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
@@ -468,7 +478,7 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
             ElevatedButton(
               onPressed: () {
                 if (_codiceController.text.isEmpty || _ubicazioneController.text.isEmpty) {
-                  _mostraMessaggio('Inserisci codice e ubicazione prima di salvare.');
+                  _mostraMessaggio('Inserisci codice e ubicazione prima di salvare.', isError: true);
                   return;
                 }
 
