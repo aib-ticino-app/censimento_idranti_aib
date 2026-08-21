@@ -862,6 +862,19 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
+                        // 1. MODIFICA
+                        IconButton(
+                          icon: const Icon(Icons.edit, color: Colors.orange),
+                          tooltip: 'Modifica',
+                          onPressed: () => _confermaEApriModificaIdrante(idrante),
+                        ),
+                        // 2. ELIMINA
+                        IconButton(
+                          icon: const Icon(Icons.delete, color: Colors.red),
+                          tooltip: 'Elimina',
+                          onPressed: () => _confermaEliminazioneIdrante(idrante),
+                        ),
+                        // 3. CAMBIA STATO
                         PopupMenuButton<String>(
                           icon: const Icon(Icons.build_circle, color: Colors.blueGrey),
                           tooltip: 'Cambia Stato',
@@ -883,13 +896,12 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
                             ),
                           ],
                         ),
+                        // 4. CONDIVIDI
                         IconButton(
-                          icon: const Icon(Icons.edit, color: Colors.orange),
-                          tooltip: 'Modifica',
-                          onPressed: () => _confermaEApriModificaIdrante(idrante),
+                          icon: const Icon(Icons.share, color: Colors.green),
+                          tooltip: 'Condividi',
+                          onPressed: () => _condividiPuntoIdrico(idrante),
                         ),
-                        IconButton(icon: const Icon(Icons.share, color: Colors.green), onPressed: () => _condividiPuntoIdrico(idrante)),
-                        IconButton(icon: const Icon(Icons.delete, color: Colors.red), onPressed: () => _confermaEliminazioneIdrante(idrante)),
                       ],
                     ),
                     onTap: () => _mostraDettaglioIdrante(idrante, dist),
