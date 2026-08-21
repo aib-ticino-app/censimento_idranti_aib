@@ -131,7 +131,6 @@ class _HomePageState extends State<HomePage> {
     super.dispose();
   }
 
-  // Rilevamento GPS diretto per Web tramite API nativa del browser
   void _ottieniPosizioneGPSNativaWeb() {
     setState(() => _caricamentoGPS = true);
 
@@ -225,13 +224,14 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  IconData _getIconaPerTipo(String tipo) {
+  // Costruttore dinamico dell'icona (Opzione B per la Vasca AIB)
+  Widget _buildIconaSimbolo(String tipo, {double size = 22, Color? overrideColor}) {
     if (tipo.contains('Vasca')) {
-      return Icons.water_damage;
+      return IconaVascaAIB(size: size);
     } else if (tipo.contains('Presa')) {
-      return Icons.waves;
+      return Icon(Icons.waves, size: size, color: overrideColor ?? Colors.blue[800]);
     }
-    return Icons.fire_hydrant_alt;
+    return Icon(Icons.fire_hydrant_alt, size: size, color: overrideColor ?? Colors.blue[800]);
   }
 
   Future<void> _avviaNavigatoreReale(double lat, double lng) async {
@@ -317,7 +317,7 @@ class _HomePageState extends State<HomePage> {
       builder: (ctx) => AlertDialog(
         title: Row(
           children: [
-            Icon(_getIconaPerTipo(idrante.tipo), color: Colors.blue[800]),
+            _buildIconaSimbolo(idrante.tipo, size: 24),
             const SizedBox(width: 8),
             Expanded(child: Text('Dettaglio ${idrante.codice}')),
           ],
@@ -759,11 +759,7 @@ class _HomePageState extends State<HomePage> {
                             },
                             child: CircleAvatar(
                               backgroundColor: coloreMarker,
-                              child: Icon(
-                                _getIconaPerTipo(idrante.tipo),
-                                color: Colors.white,
-                                size: 20,
-                              ),
+                              child: _buildIconaSimbolo(idrante.tipo, size: 20, overrideColor: Colors.white),
                             ),
                           ),
                         );
@@ -855,9 +851,10 @@ class _HomePageState extends State<HomePage> {
                                       backgroundColor: isGuasto
                                           ? Colors.red[100]
                                           : (idrante.stato == 'Da Verificare' ? Colors.orange[100] : Colors.blue[100]),
-                                      child: Icon(
-                                        _getIconaPerTipo(idrante.tipo),
-                                        color: isGuasto
+                                      child: _buildIconaSimbolo(
+                                        idrante.tipo,
+                                        size: 20,
+                                        overrideColor: isGuasto
                                             ? Colors.red[800]
                                             : (idrante.stato == 'Da Verificare' ? Colors.orange[900] : Colors.blue[800]),
                                       ),
@@ -998,6 +995,35 @@ class _HomePageState extends State<HomePage> {
                   ),
             const SizedBox(height: 20),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// Widget grafico dedicato alla Vasca AIB di Riserva
+class IconaVascaAIB extends StatelessWidget {
+  final double size;
+  const IconaVascaAIB({super.key, this.size = 20});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Colors.blue[300],
+        border: Border.all(
+          color: Colors.red[700]!,
+          width: 3.0,
+        ),
+      ),
+      child: Center(
+        child: Icon(
+          Icons.waves,
+          size: size * 0.55,
+          color: Colors.white,
         ),
       ),
     );
