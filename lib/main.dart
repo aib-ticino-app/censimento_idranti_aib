@@ -177,18 +177,25 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _cambiaStatoIdrante(PuntoIdrico idrante, String nuovoStato) async {
+    // Aggiorna immediatamente l'interfaccia utente (colore marcatore e testo)
     setState(() {
       idrante.stato = nuovoStato;
     });
+
     try {
-      await http.patch(
+      final response = await http.patch(
         Uri.parse('$_supabaseUrl/rest/v1/idranti?id=eq.${idrante.id}'),
         headers: _headers,
         body: json.encode({'stato': nuovoStato}),
       );
-      _mostraMessaggio('Stato aggiornato nel Cloud!');
+
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        _mostraMessaggio('Stato aggiornato a "$nuovoStato"!');
+      } else {
+        _mostraMessaggio('Errore ${response.statusCode} salvataggio stato.', isError: true);
+      }
     } catch (e) {
-      _mostraMessaggio('Errore aggiornamento Supabase.', isError: true);
+      _mostraMessaggio('Errore di connessione a Supabase.', isError: true);
     }
   }
 
@@ -566,6 +573,19 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
             const SizedBox(height: 6),
             Row(
               children: [
+                const Text('Stato: ', style: TextStyle(fontWeight: FontWeight.bold)),
+                Text(
+                  idrante.stato,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: _getColoreStato(idrante.stato),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Row(
+              children: [
                 Icon(
                   idrante.isH24 ? Icons.lock_open : Icons.lock,
                   size: 16,
@@ -858,7 +878,27 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
                   child: ListTile(
                     leading: _buildIconaSimbolo(idrante.tipo),
                     title: Text('${idrante.codice} - ${idrante.tipo}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text('${idrante.ubicazione} (${idrante.isH24 ? "H24" : "Privato"})\nDistanza: ${dist.toStringAsFixed(2)} km'),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('${idrante.ubicazione} (${idrante.isH24 ? "H24" : "Privato"})'),
+                        Row(
+                          children: [
+                            const Text('Stato: ', style: TextStyle(fontSize: 12)),
+                            Text(
+                              idrante.stato,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: _getColoreStato(idrante.stato),
+                              ),
+                            ),
+                            const Text(' • ', style: TextStyle(fontSize: 12)),
+                            Text('Dist: ${dist.toStringAsFixed(2)} km', style: const TextStyle(fontSize: 12)),
+                          ],
+                        ),
+                      ],
+                    ),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
