@@ -177,7 +177,6 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _cambiaStatoIdrante(PuntoIdrico idrante, String nuovoStato) async {
-    // Aggiorna immediatamente l'interfaccia utente (colore marcatore e testo)
     setState(() {
       idrante.stato = nuovoStato;
     });
@@ -336,9 +335,19 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
     }
   }
 
-  Widget _buildIconaSimbolo(String tipo, {double size = 22, Color? overrideColor}) {
-    if (tipo.contains('Vasca')) return IconaVascaAIB(size: size);
-    if (tipo.contains('Presa')) return Icon(Icons.waves, size: size, color: overrideColor ?? Colors.blue[800]);
+  Widget _buildIconaSimbolo(PuntoIdrico idrante, {double size = 22, Color? overrideColor}) {
+    // 1. Stato Non Funzionante -> Icona X
+    if (idrante.stato == 'Non Funzionante') {
+      return Icon(Icons.close, size: size, color: overrideColor ?? Colors.white);
+    }
+    // 2. Stato Da Verificare -> Icona ?
+    if (idrante.stato == 'Da Verificare') {
+      return Icon(Icons.question_mark, size: size * 0.8, color: overrideColor ?? Colors.white);
+    }
+
+    // 3. Stato Funzionante -> Icona Classica specifica per tipo
+    if (idrante.tipo.contains('Vasca')) return IconaVascaAIB(size: size);
+    if (idrante.tipo.contains('Presa')) return Icon(Icons.waves, size: size, color: overrideColor ?? Colors.blue[800]);
     return Icon(Icons.fire_hydrant_alt, size: size, color: overrideColor ?? Colors.blue[800]);
   }
 
@@ -346,6 +355,44 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
     final Uri googleMapsUrl = Uri.parse('https://www.google.com/maps/dir/?api=1&destination=$lat,$lng&travelmode=driving');
     if (await canLaunchUrl(googleMapsUrl)) {
       await launchUrl(googleMapsUrl, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  void _richiediEAvviaNavigazione(PuntoIdrico idrante) {
+    if (idrante.stato == 'Non Funzionante') {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: Colors.red, size: 28),
+              SizedBox(width: 8),
+              Expanded(child: Text('Punto Non Funzionante')),
+            ],
+          ),
+          content: Text(
+            'ATTENZIONE:\nIl punto idrico ${idrante.codice} è attualmente segnalato come "NON FUNZIONANTE".\n\nVuoi comunque avviare il navigatore verso questa posizione?',
+            style: const TextStyle(fontSize: 14),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Annulla'),
+            ),
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.of(ctx).pop();
+                _avviaNavigatoreReale(idrante.latitudine, idrante.longitudine);
+              },
+              icon: const Icon(Icons.navigation, color: Colors.white),
+              label: const Text('Naviga Comunque'),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red[700], foregroundColor: Colors.white),
+            ),
+          ],
+        ),
+      );
+    } else {
+      _avviaNavigatoreReale(idrante.latitudine, idrante.longitudine);
     }
   }
 
@@ -558,7 +605,7 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
       builder: (ctx) => AlertDialog(
         title: Row(
           children: [
-            _buildIconaSimbolo(idrante.tipo, size: 24),
+            _buildIconaSimbolo(idrante, size: 24, overrideColor: _getColoreStato(idrante.stato)),
             const SizedBox(width: 8),
             Expanded(child: Text('Dettaglio ${idrante.codice}')),
           ],
@@ -626,11 +673,14 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
           ElevatedButton.icon(
             onPressed: () {
               Navigator.of(ctx).pop();
-              _avviaNavigatoreReale(idrante.latitudine, idrante.longitudine);
+              _richiediEAvviaNavigazione(idrante);
             },
             icon: const Icon(Icons.turn_right, color: Colors.white),
             label: const Text('Naviga'),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.blue[700], foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: idrante.stato == 'Non Funzionante' ? Colors.red[700] : Colors.blue[700],
+              foregroundColor: Colors.white,
+            ),
           ),
         ],
       ),
@@ -836,7 +886,7 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
                                 idrante, _calcolaDistanzaKm(posizioneCorrenteLat, posizioneCorrenteLng, idrante.latitudine, idrante.longitudine)),
                             child: CircleAvatar(
                               backgroundColor: _getColoreStato(idrante.stato),
-                              child: _buildIconaSimbolo(idrante.tipo, size: 18, overrideColor: Colors.white),
+                              child: _buildIconaSimbolo(idrante, size: 18, overrideColor: Colors.white),
                             ),
                           ),
                         );
@@ -876,7 +926,10 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
                 return Card(
                   margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   child: ListTile(
-                    leading: _buildIconaSimbolo(idrante.tipo),
+                    leading: CircleAvatar(
+                      backgroundColor: _getColoreStato(idrante.stato),
+                      child: _buildIconaSimbolo(idrante, size: 18, overrideColor: Colors.white),
+                    ),
                     title: Text('${idrante.codice} - ${idrante.tipo}', style: const TextStyle(fontWeight: FontWeight.bold)),
                     subtitle: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
