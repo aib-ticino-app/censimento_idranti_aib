@@ -822,7 +822,7 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
               errorBuilder: (context, error, stackTrace) => const Icon(Icons.local_fire_department, color: Colors.orange),
             ),
             const SizedBox(width: 10),
-            const Text('Idranti AIB Cloud', style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text('Idranti AIB Cloud', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
           ],
         ),
         actions: [
@@ -835,13 +835,13 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
           children: [
             if (_caricamentoCloud) const LinearProgressIndicator(color: Colors.orange),
             Container(
-              height: 40,
+              height: 36,
               color: Colors.blue[900],
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Parco Ticino - Supabase Cloud', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  const Text('Parco Ticino - Supabase Cloud', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
                   Text('GPS: ${posizioneCorrenteLat.toStringAsFixed(4)}, ${posizioneCorrenteLng.toStringAsFixed(4)}',
                       style: const TextStyle(color: Colors.white70, fontSize: 11)),
                 ],
@@ -878,16 +878,16 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
               ),
             ),
             Padding(
-              padding: const EdgeInsets.all(12.0),
+              padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Punti Censiti (${listaIdranti.length})', style: const TextStyle(fontWeight: FontWeight.bold)),
+                  Text('Punti Censiti (${listaIdranti.length})', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                   ElevatedButton.icon(
                     onPressed: _mostraDialogoNuovoIdrante,
                     icon: const Icon(Icons.cloud_upload, size: 16, color: Colors.white),
-                    label: const Text('+ Idrante Cloud', style: TextStyle(color: Colors.white)),
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.blue[700]),
+                    label: const Text('+ Idrante Cloud', style: TextStyle(color: Colors.white, fontSize: 13)),
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.blue[700], padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8)),
                   ),
                 ],
               ),
@@ -897,6 +897,7 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
               padding: const EdgeInsets.symmetric(horizontal: 12.0),
               child: Row(children: [_buildFilterChip('Tutti'), _buildFilterChip('Idranti'), _buildFilterChip('Vasche'), _buildFilterChip('Prese d\'Acqua')]),
             ),
+            const SizedBox(height: 6),
             ListView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
@@ -905,76 +906,90 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
                 final idrante = idrantiMostrati[index];
                 double dist = _calcolaDistanzaKm(posizioneCorrenteLat, posizioneCorrenteLng, idrante.latitudine, idrante.longitudine);
                 return Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  child: ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: _getColoreStato(idrante.stato),
-                      child: _buildIconaSimbolo(idrante, size: 18, overrideColor: Colors.white),
-                    ),
-                    title: Text('${idrante.codice} - ${idrante.tipo}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Column(
+                  margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  child: Padding(
+                    padding: const EdgeInsets.all(10.0),
+                    child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('${idrante.ubicazione} (${idrante.isH24 ? "H24" : "Privato"})'),
-                        Row(
-                          children: [
-                            const Text('Stato: ', style: TextStyle(fontSize: 12)),
-                            Text(
-                              idrante.stato,
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: _getColoreStato(idrante.stato),
+                        CircleAvatar(
+                          radius: 20,
+                          backgroundColor: _getColoreStato(idrante.stato),
+                          child: _buildIconaSimbolo(idrante, size: 18, overrideColor: Colors.white),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '${idrante.codice} - ${idrante.tipo}',
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                               ),
-                            ),
-                            const Text(' • ', style: TextStyle(fontSize: 12)),
-                            Text('Dist: ${dist.toStringAsFixed(2)} km', style: const TextStyle(fontSize: 12)),
-                          ],
+                              const SizedBox(height: 2),
+                              Text(
+                                '${idrante.ubicazione} (${idrante.isH24 ? "H24" : "Privato"})',
+                                style: const TextStyle(fontSize: 12, color: Colors.black87),
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  const Text('Stato: ', style: TextStyle(fontSize: 11)),
+                                  Text(
+                                    idrante.stato,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: _getColoreStato(idrante.stato),
+                                    ),
+                                  ),
+                                  const Text(' • ', style: TextStyle(fontSize: 11)),
+                                  Text('Dist: ${dist.toStringAsFixed(2)} km', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500)),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Row(
+                                children: [
+                                  InkWell(
+                                    onTap: () => _confermaEApriModificaIdrante(idrante),
+                                    child: const Padding(
+                                      padding: EdgeInsets.only(right: 12.0),
+                                      child: Icon(Icons.edit, size: 20, color: Colors.orange),
+                                    ),
+                                  ),
+                                  InkWell(
+                                    onTap: () => _confermaEliminazioneIdrante(idrante),
+                                    child: const Padding(
+                                      padding: EdgeInsets.only(right: 12.0),
+                                      child: Icon(Icons.delete, size: 20, color: Colors.red),
+                                    ),
+                                  ),
+                                  PopupMenuButton<String>(
+                                    padding: EdgeInsets.zero,
+                                    icon: const Icon(Icons.build_circle, size: 20, color: Colors.blueGrey),
+                                    tooltip: 'Cambia Stato',
+                                    onSelected: (String nuovoStato) => _cambiaStatoIdrante(idrante, nuovoStato),
+                                    itemBuilder: (BuildContext context) => [
+                                      const PopupMenuItem(value: 'Funzionante', child: Text('Funzionante', style: TextStyle(color: Colors.green))),
+                                      const PopupMenuItem(value: 'Non Funzionante', child: Text('Non Funzionante', style: TextStyle(color: Colors.red))),
+                                      const PopupMenuItem(value: 'Da Verificare', child: Text('Da Verificare', style: TextStyle(color: Colors.orange))),
+                                    ],
+                                  ),
+                                  const SizedBox(width: 4),
+                                  InkWell(
+                                    onTap: () => _condividiPuntoIdrico(idrante),
+                                    child: const Padding(
+                                      padding: EdgeInsets.symmetric(horizontal: 8.0),
+                                      child: Icon(Icons.share, size: 20, color: Colors.green),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.edit, color: Colors.orange),
-                          tooltip: 'Modifica',
-                          onPressed: () => _confermaEApriModificaIdrante(idrante),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.delete, color: Colors.red),
-                          tooltip: 'Elimina',
-                          onPressed: () => _confermaEliminazioneIdrante(idrante),
-                        ),
-                        PopupMenuButton<String>(
-                          icon: const Icon(Icons.build_circle, color: Colors.blueGrey),
-                          tooltip: 'Cambia Stato',
-                          onSelected: (String nuovoStato) {
-                            _cambiaStatoIdrante(idrante, nuovoStato);
-                          },
-                          itemBuilder: (BuildContext context) => [
-                            const PopupMenuItem(
-                              value: 'Funzionante',
-                              child: Text('Segna come: Funzionante', style: TextStyle(color: Colors.green)),
-                            ),
-                            const PopupMenuItem(
-                              value: 'Non Funzionante',
-                              child: Text('Segna come: Non Funzionante', style: TextStyle(color: Colors.red)),
-                            ),
-                            const PopupMenuItem(
-                              value: 'Da Verificare',
-                              child: Text('Segna come: Da Verificare', style: TextStyle(color: Colors.orange)),
-                            ),
-                          ],
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.share, color: Colors.green),
-                          tooltip: 'Condividi',
-                          onPressed: () => _condividiPuntoIdrico(idrante),
-                        ),
-                      ],
-                    ),
-                    onTap: () => _mostraDettaglioIdrante(idrante, dist),
                   ),
                 );
               },
