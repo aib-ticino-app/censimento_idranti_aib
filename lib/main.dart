@@ -601,6 +601,9 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
   }
 
   void _mostraDettaglioIdrante(PuntoIdrico idrante, double distanzaKm) {
+    // Sposta anche la mappa sul punto selezionato
+    _mapController.move(LatLng(idrante.latitudine, idrante.longitudine), 15.0);
+
     String latGMS = _convertiInWGS84GMS(idrante.latitudine, true);
     String lngGMS = _convertiInWGS84GMS(idrante.longitudine, false);
 
@@ -930,88 +933,92 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
                 double dist = _calcolaDistanzaKm(posizioneCorrenteLat, posizioneCorrenteLng, idrante.latitudine, idrante.longitudine);
                 return Card(
                   margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  child: Padding(
-                    padding: const EdgeInsets.all(10.0),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        CircleAvatar(
-                          radius: 20,
-                          backgroundColor: _getColoreStato(idrante.stato),
-                          child: _buildIconaSimbolo(idrante, size: 18, overrideColor: Colors.white),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '${idrante.codice} - ${idrante.tipo}',
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                '${idrante.ubicazione} (${idrante.isH24 ? "H24" : "Privato"})',
-                                style: const TextStyle(fontSize: 12, color: Colors.black87),
-                              ),
-                              const SizedBox(height: 4),
-                              Row(
-                                children: [
-                                  const Text('Stato: ', style: TextStyle(fontSize: 11)),
-                                  Text(
-                                    idrante.stato,
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
-                                      color: _getColoreStato(idrante.stato),
-                                    ),
-                                  ),
-                                  const Text(' • ', style: TextStyle(fontSize: 11)),
-                                  Text('Dist: ${dist.toStringAsFixed(2)} km', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500)),
-                                ],
-                              ),
-                              const SizedBox(height: 6),
-                              Row(
-                                children: [
-                                  InkWell(
-                                    onTap: () => _confermaEApriModificaIdrante(idrante),
-                                    child: const Padding(
-                                      padding: EdgeInsets.only(right: 12.0),
-                                      child: Icon(Icons.edit, size: 20, color: Colors.orange),
-                                    ),
-                                  ),
-                                  InkWell(
-                                    onTap: () => _confermaEliminazioneIdrante(idrante),
-                                    child: const Padding(
-                                      padding: EdgeInsets.only(right: 12.0),
-                                      child: Icon(Icons.delete, size: 20, color: Colors.red),
-                                    ),
-                                  ),
-                                  PopupMenuButton<String>(
-                                    padding: EdgeInsets.zero,
-                                    icon: const Icon(Icons.build_circle, size: 20, color: Colors.blueGrey),
-                                    tooltip: 'Cambia Stato',
-                                    onSelected: (String nuovoStato) => _cambiaStatoIdrante(idrante, nuovoStato),
-                                    itemBuilder: (BuildContext context) => [
-                                      const PopupMenuItem(value: 'Funzionante', child: Text('Funzionante', style: TextStyle(color: Colors.green))),
-                                      const PopupMenuItem(value: 'Non Funzionante', child: Text('Non Funzionante', style: TextStyle(color: Colors.red))),
-                                      const PopupMenuItem(value: 'Da Verificare', child: Text('Da Verificare', style: TextStyle(color: Colors.orange))),
-                                    ],
-                                  ),
-                                  const SizedBox(width: 4),
-                                  InkWell(
-                                    onTap: () => _condividiPuntoIdrico(idrante),
-                                    child: const Padding(
-                                      padding: EdgeInsets.symmetric(horizontal: 8.0),
-                                      child: Icon(Icons.share, size: 20, color: Colors.green),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () => _mostraDettaglioIdrante(idrante, dist),
+                    child: Padding(
+                      padding: const EdgeInsets.all(10.0),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          CircleAvatar(
+                            radius: 20,
+                            backgroundColor: _getColoreStato(idrante.stato),
+                            child: _buildIconaSimbolo(idrante, size: 18, overrideColor: Colors.white),
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '${idrante.codice} - ${idrante.tipo}',
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  '${idrante.ubicazione} (${idrante.isH24 ? "H24" : "Privato"})',
+                                  style: const TextStyle(fontSize: 12, color: Colors.black87),
+                                ),
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    const Text('Stato: ', style: TextStyle(fontSize: 11)),
+                                    Text(
+                                      idrante.stato,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: _getColoreStato(idrante.stato),
+                                      ),
+                                    ),
+                                    const Text(' • ', style: TextStyle(fontSize: 11)),
+                                    Text('Dist: ${dist.toStringAsFixed(2)} km', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500)),
+                                  ],
+                                ),
+                                const SizedBox(height: 6),
+                                Row(
+                                  children: [
+                                    InkWell(
+                                      onTap: () => _confermaEApriModificaIdrante(idrante),
+                                      child: const Padding(
+                                        padding: EdgeInsets.only(right: 12.0),
+                                        child: Icon(Icons.edit, size: 20, color: Colors.orange),
+                                      ),
+                                    ),
+                                    InkWell(
+                                      onTap: () => _confermaEliminazioneIdrante(idrante),
+                                      child: const Padding(
+                                        padding: EdgeInsets.only(right: 12.0),
+                                        child: Icon(Icons.delete, size: 20, color: Colors.red),
+                                      ),
+                                    ),
+                                    PopupMenuButton<String>(
+                                      padding: EdgeInsets.zero,
+                                      icon: const Icon(Icons.build_circle, size: 20, color: Colors.blueGrey),
+                                      tooltip: 'Cambia Stato',
+                                      onSelected: (String nuovoStato) => _cambiaStatoIdrante(idrante, nuovoStato),
+                                      itemBuilder: (BuildContext context) => [
+                                        const PopupMenuItem(value: 'Funzionante', child: Text('Funzionante', style: TextStyle(color: Colors.green))),
+                                        const PopupMenuItem(value: 'Non Funzionante', child: Text('Non Funzionante', style: TextStyle(color: Colors.red))),
+                                        const PopupMenuItem(value: 'Da Verificare', child: Text('Da Verificare', style: TextStyle(color: Colors.orange))),
+                                      ],
+                                    ),
+                                    const SizedBox(width: 4),
+                                    InkWell(
+                                      onTap: () => _condividiPuntoIdrico(idrante),
+                                      child: const Padding(
+                                        padding: EdgeInsets.symmetric(horizontal: 8.0),
+                                        child: Icon(Icons.share, size: 20, color: Colors.green),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 );
