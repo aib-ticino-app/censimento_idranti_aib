@@ -262,12 +262,20 @@ class _HomePageState extends State<HomePage> {
     String attacchiStr = attacchi.isNotEmpty ? attacchi.join(', ') : 'Nessuno';
     String accessoStr = idrante.isH24 ? 'Accessibile H24' : 'Proprietà Privata';
 
+    // Pallino colorato dinamico in base allo stato
+    String pallinoStato = '🟢';
+    if (idrante.stato == 'Non Funzionante') {
+      pallinoStato = '🔴';
+    } else if (idrante.stato == 'Da Verificare') {
+      pallinoStato = '🟡';
+    }
+
     String testoCondivisione = '''
 🚨 *PUNTO IDRICO AIB*
 📌 *Codice:* ${idrante.codice} (${idrante.tipo})
 📍 *Ubicazione:* ${idrante.ubicazione}
 🔑 *Accesso:* $accessoStr
-🟢 *Stato:* ${idrante.stato}
+$pallinoStato *Stato:* ${idrante.stato}
 ⚙️ *Attacchi:* $attacchiStr
 
 🌐 *WGS84 (GMS):*
@@ -336,16 +344,13 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
   }
 
   Widget _buildIconaSimbolo(PuntoIdrico idrante, {double size = 22, Color? overrideColor}) {
-    // 1. Stato Non Funzionante -> Icona X
     if (idrante.stato == 'Non Funzionante') {
       return Icon(Icons.close, size: size, color: overrideColor ?? Colors.white);
     }
-    // 2. Stato Da Verificare -> Icona ?
     if (idrante.stato == 'Da Verificare') {
       return Icon(Icons.question_mark, size: size * 0.8, color: overrideColor ?? Colors.white);
     }
 
-    // 3. Stato Funzionante -> Icona Classica specifica per tipo
     if (idrante.tipo.contains('Vasca')) return IconaVascaAIB(size: size);
     if (idrante.tipo.contains('Presa')) return Icon(Icons.waves, size: size, color: overrideColor ?? Colors.blue[800]);
     return Icon(Icons.fire_hydrant_alt, size: size, color: overrideColor ?? Colors.blue[800]);

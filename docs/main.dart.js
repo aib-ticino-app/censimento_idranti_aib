@@ -46720,23 +46720,26 @@ if(b)s=a>=0?"N":"S"
 else s=a>=0?"E":"W"
 r=B.i.k(q)
 return B.c.kh(r,b?2:3,"0")+"\xb0 "+B.c.kh(B.i.k(o),2,"0")+"' "+B.c.kh(B.d.a9((p-o)*60,1),4,"0")+'" '+s},
-Q3(a){var s,r,q,p,o,n,m=a.f,l=this.yb(m,!0),k=a.r,j=this.yb(k,!1),i=A.b([],t.s)
-if(a.x)i.push("UNI 45")
-if(a.y)i.push("UNI 70")
-r=i.length!==0?B.b.by(i,", "):"Nessuno"
+Q3(a){var s,r,q,p,o,n,m,l,k=a.f,j=this.yb(k,!0),i=a.r,h=this.yb(i,!1),g=A.b([],t.s)
+if(a.x)g.push("UNI 45")
+if(a.y)g.push("UNI 70")
+r=g.length!==0?B.b.by(g,", "):"Nessuno"
 q=a.z?"Accessibile H24":"Propriet\xe0 Privata"
-p=a.b
-s="\ud83d\udea8 *PUNTO IDRICO AIB*\n\ud83d\udccc *Codice:* "+p+" ("+a.c+")\n\ud83d\udccd *Ubicazione:* "+a.d+"\n\ud83d\udd11 *Accesso:* "+q+"\n\ud83d\udfe2 *Stato:* "+a.e+"\n\u2699\ufe0f *Attacchi:* "+r+"\n\n\ud83c\udf10 *WGS84 (GMS):*\n"+l+" - "+j+"\n\n\ud83e\udded *Decimali:*\n"+B.d.a9(m,6)+", "+B.d.a9(k,6)+"\n\n\ud83d\uddfa\ufe0f *Mappa:*\nhttps://www.google.com/maps/search/?api=1&query="+A.k(m)+","+A.k(k)+"\n"
-try{m=window.navigator
-m.toString
-k=t.z
-o=A.aGh(A.aB(["title","Punto Idrico "+p,"text",s],k,k))
-m=m.share(o)
-m.toString
-A.eq(m,k)}catch(n){m=window.navigator.clipboard
-if(m!=null){m=m.writeText(s)
-m.toString
-A.eq(m,t.z)}this.qG("Dati del punto idrico copiati negli appunti!")}},
+p=a.e
+if(p==="Non Funzionante")o="\ud83d\udd34"
+else o=p==="Da Verificare"?"\ud83d\udfe1":"\ud83d\udfe2"
+n=a.b
+s="\ud83d\udea8 *PUNTO IDRICO AIB*\n\ud83d\udccc *Codice:* "+n+" ("+a.c+")\n\ud83d\udccd *Ubicazione:* "+a.d+"\n\ud83d\udd11 *Accesso:* "+q+"\n"+o+" *Stato:* "+p+"\n\u2699\ufe0f *Attacchi:* "+r+"\n\n\ud83c\udf10 *WGS84 (GMS):*\n"+j+" - "+h+"\n\n\ud83e\udded *Decimali:*\n"+B.d.a9(k,6)+", "+B.d.a9(i,6)+"\n\n\ud83d\uddfa\ufe0f *Mappa:*\nhttps://www.google.com/maps/search/?api=1&query="+A.k(k)+","+A.k(i)+"\n"
+try{k=window.navigator
+k.toString
+i=t.z
+m=A.aGh(A.aB(["title","Punto Idrico "+n,"text",s],i,i))
+k=k.share(m)
+k.toString
+A.eq(k,i)}catch(l){k=window.navigator.clipboard
+if(k!=null){k=k.writeText(s)
+k.toString
+A.eq(k,t.z)}this.qG("Dati del punto idrico copiati negli appunti!")}},
 R5(a){var s,r=a==="Idrante Sottosuolo"?"IDR-U":"IDR-S"
 if(a==="Vasca AIB di Riserva")r="VAS"
 if(a==="Presa d'Acqua Naturale")r="PRE"
