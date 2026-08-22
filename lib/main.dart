@@ -1,7 +1,7 @@
 import 'dart:convert';
+import 'dart:html' as html;
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
@@ -74,6 +74,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+    _ottieniPosizioneGPS();
     _caricaIdrantiDaSupabase();
   }
 
@@ -85,6 +86,20 @@ class _HomePageState extends State<HomePage> {
     _lngController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  void _ottieniPosizioneGPS() {
+    if (html.window.navigator.geolocation != null) {
+      html.window.navigator.geolocation!.getCurrentPosition().then((pos) {
+        if (pos.coords != null && mounted) {
+          setState(() {
+            posizioneCorrenteLat = pos.coords!.latitude?.toDouble() ?? posizioneCorrenteLat;
+            posizioneCorrenteLng = pos.coords!.longitude?.toDouble() ?? posizioneCorrenteLng;
+          });
+          _mapController.move(LatLng(posizioneCorrenteLat, posizioneCorrenteLng), 14.0);
+        }
+      }).catchError((_) {});
+    }
   }
 
   Map<String, String> get _headers => {
@@ -272,8 +287,15 @@ ${idrante.latitudine.toStringAsFixed(6)}, ${idrante.longitudine.toStringAsFixed(
 https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.longitudine}
 ''';
 
-    Clipboard.setData(ClipboardData(text: testoCondivisione));
-    _mostraMessaggio('Dati del punto idrico copiati negli appunti!');
+    if (html.window.navigator.share != null) {
+      html.window.navigator.share({
+        'title': 'Punto Idrico AIB ${idrante.codice}',
+        'text': testoCondivisione,
+      });
+    } else {
+      html.window.navigator.clipboard?.writeText(testoCondivisione);
+      _mostraMessaggio('Dati del punto idrico copiati negli appunti!');
+    }
   }
 
   String _generaCodiceProgressivo(String tipo) {
@@ -826,6 +848,7 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
           ],
         ),
         actions: [
+          IconButton(icon: const Icon(Icons.my_location), onPressed: _ottieniPosizioneGPS, tooltip: 'Aggiorna Posizione GPS'),
           IconButton(icon: const Icon(Icons.refresh), onPressed: _caricaIdrantiDaSupabase, tooltip: 'Ricarica da Supabase'),
         ],
       ),
