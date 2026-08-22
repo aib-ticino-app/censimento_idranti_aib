@@ -1,7 +1,7 @@
 import 'dart:convert';
-import 'dart:html' as html;
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
@@ -74,7 +74,6 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    _ottieniPosizioneGPSNativaWeb();
     _caricaIdrantiDaSupabase();
   }
 
@@ -213,20 +212,6 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  void _ottieniPosizioneGPSNativaWeb() {
-    if (html.window.navigator.geolocation != null) {
-      html.window.navigator.geolocation!.getCurrentPosition().then((pos) {
-        if (pos.coords != null) {
-          setState(() {
-            posizioneCorrenteLat = pos.coords!.latitude!.toDouble();
-            posizioneCorrenteLng = pos.coords!.longitude!.toDouble();
-          });
-          _mapController.move(LatLng(posizioneCorrenteLat, posizioneCorrenteLng), 14.0);
-        }
-      }).catchError((_) {});
-    }
-  }
-
   void _mostraMessaggio(String testo, {bool isError = false}) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -262,7 +247,6 @@ class _HomePageState extends State<HomePage> {
     String attacchiStr = attacchi.isNotEmpty ? attacchi.join(', ') : 'Nessuno';
     String accessoStr = idrante.isH24 ? 'Accessibile H24' : 'Proprietà Privata';
 
-    // Pallino colorato dinamico in base allo stato
     String pallinoStato = '🟢';
     if (idrante.stato == 'Non Funzionante') {
       pallinoStato = '🔴';
@@ -288,15 +272,8 @@ ${idrante.latitudine.toStringAsFixed(6)}, ${idrante.longitudine.toStringAsFixed(
 https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.longitudine}
 ''';
 
-    try {
-      html.window.navigator.share({
-        'title': 'Punto Idrico ${idrante.codice}',
-        'text': testoCondivisione,
-      });
-    } catch (_) {
-      html.window.navigator.clipboard?.writeText(testoCondivisione);
-      _mostraMessaggio('Dati del punto idrico copiati negli appunti!');
-    }
+    Clipboard.setData(ClipboardData(text: testoCondivisione));
+    _mostraMessaggio('Dati del punto idrico copiati negli appunti!');
   }
 
   String _generaCodiceProgressivo(String tipo) {
@@ -850,7 +827,6 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
         ),
         actions: [
           IconButton(icon: const Icon(Icons.refresh), onPressed: _caricaIdrantiDaSupabase, tooltip: 'Ricarica da Supabase'),
-          IconButton(icon: const Icon(Icons.my_location), onPressed: _ottieniPosizioneGPSNativaWeb, tooltip: 'Aggiorna GPS'),
         ],
       ),
       body: SingleChildScrollView(
@@ -960,19 +936,16 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // 1. MODIFICA
                         IconButton(
                           icon: const Icon(Icons.edit, color: Colors.orange),
                           tooltip: 'Modifica',
                           onPressed: () => _confermaEApriModificaIdrante(idrante),
                         ),
-                        // 2. ELIMINA
                         IconButton(
                           icon: const Icon(Icons.delete, color: Colors.red),
                           tooltip: 'Elimina',
                           onPressed: () => _confermaEliminazioneIdrante(idrante),
                         ),
-                        // 3. CAMBIA STATO
                         PopupMenuButton<String>(
                           icon: const Icon(Icons.build_circle, color: Colors.blueGrey),
                           tooltip: 'Cambia Stato',
@@ -994,7 +967,6 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
                             ),
                           ],
                         ),
-                        // 4. CONDIVIDI
                         IconButton(
                           icon: const Icon(Icons.share, color: Colors.green),
                           tooltip: 'Condividi',
