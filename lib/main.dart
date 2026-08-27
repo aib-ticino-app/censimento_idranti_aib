@@ -579,7 +579,7 @@ class _HomePageState extends State<HomePage> {
     String lngGMS = _convertiInWGS84GMS(idrante.longitudine, false);
     String utmStr = _convertiInUTM(idrante.latitudine, idrante.longitudine);
 
-    // Filtra solo gli attacchi realmente presenti per evitare confusione
+    // Filtra solo gli attacchi realmente presenti, rimuovendo del tutto quelli assenti
     List<String> attacchi = [];
     if (idrante.hasUni45) attacchi.add('UNI 45');
     if (idrante.hasUni70) attacchi.add('UNI 70');
