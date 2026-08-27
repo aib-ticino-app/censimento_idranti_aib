@@ -62,7 +62,7 @@ class AuthPage extends StatefulWidget {
 class _AuthPageState extends State<AuthPage> {
   bool isLogin = true;
   bool loading = false;
-  bool ricordaAccesso = true; // Spunta Ricordami attiva di default
+  bool ricordaAccesso = true;
 
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -173,8 +173,12 @@ class _AuthPageState extends State<AuthPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.local_fire_department, color: Colors.orange, size: 36),
-                      const SizedBox(width: 8),
+                      Image.asset(
+                        'assets/logo.png',
+                        height: 40,
+                        errorBuilder: (_, __, ___) => const Icon(Icons.local_fire_department, color: Colors.orange, size: 36),
+                      ),
+                      const SizedBox(width: 10),
                       Text(
                         isLogin ? 'Accedi ad AIB Cloud' : 'Registrazione Volontario',
                         style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -252,7 +256,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   String _filtroSelezionato = 'Tutti';
-  bool _usaMappaTopografica = false; // Di default parte su mappa standard (OpenStreetMap)
+  bool _usaMappaTopografica = false;
 
   double posizioneCorrenteLat = 45.6512;
   double posizioneCorrenteLng = 8.7123;
@@ -836,12 +840,13 @@ class _HomePageState extends State<HomePage> {
   void _mostraMenuProfilo(BuildContext context) {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (context) {
         return Padding(
-          padding: const EdgeInsets.all(20),
+          padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(context).viewInsets.bottom + 20),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -856,7 +861,7 @@ class _HomePageState extends State<HomePage> {
               Text('🏷️ Sigla Operativa: ${mioProfilo?['sigla'] ?? "N/D"}', style: const TextStyle(fontSize: 15)),
               const SizedBox(height: 6),
               Text('⭐ Ruolo: ${mioProfilo?['ruolo'] ?? "N/D"}', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.blue)),
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
@@ -889,43 +894,57 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(
         backgroundColor: Colors.blue[800],
         foregroundColor: Colors.white,
+        titleSpacing: 4,
         title: Row(
           children: [
             Image.asset(
               'assets/logo.png',
-              height: 30,
+              height: 28,
               errorBuilder: (_, __, ___) => const Icon(Icons.local_fire_department, color: Colors.orange),
             ),
-            const SizedBox(width: 8),
-            const Text('Idranti AIB', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const SizedBox(width: 6),
+            const Flexible(
+              child: Text(
+                'Idranti AIB',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           ],
         ),
         actions: [
           IconButton(
             icon: Icon(_usaMappaTopografica ? Icons.terrain : Icons.map),
             onPressed: () => setState(() => _usaMappaTopografica = !_usaMappaTopografica),
-            tooltip: _usaMappaTopografica ? 'Passa a Mappa Standard' : 'Passa a Mappa Topografica (Curve di Livello)',
+            tooltip: _usaMappaTopografica ? 'Passa a Mappa Standard' : 'Passa a Mappa Topografica',
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
           ),
           IconButton(
             icon: const Icon(Icons.my_location),
             onPressed: _ottieniPosizioneGPS,
-            tooltip: 'Aggiorna Posizione GPS',
+            tooltip: 'Aggiorna GPS',
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
           ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _caricaIdrantiDaSupabase,
-            tooltip: 'Ricarica da Supabase',
+            tooltip: 'Ricarica',
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
           ),
           if (mioProfilo != null)
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4.0),
+              padding: const EdgeInsets.symmetric(horizontal: 2.0),
               child: Center(
                 child: InkWell(
                   onTap: () => _mostraMenuProfilo(context),
                   child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       _buildBadgeCasco(mioProfilo!['ruolo']),
-                      const Icon(Icons.arrow_drop_down, color: Colors.white),
+                      const Icon(Icons.arrow_drop_down, color: Colors.white, size: 20),
                     ],
                   ),
                 ),
@@ -933,20 +952,27 @@ class _HomePageState extends State<HomePage> {
             ),
           if (mioProfilo?['ruolo'] == 'AMMINISTRATORE')
             Stack(
+              alignment: Alignment.center,
               children: [
-                IconButton(icon: const Icon(Icons.admin_panel_settings), onPressed: _apriPannelloAdmin),
+                IconButton(
+                  icon: const Icon(Icons.admin_panel_settings),
+                  onPressed: _apriPannelloAdmin,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                ),
                 if (utentiDaApprovare > 0)
                   Positioned(
-                    right: 8,
+                    right: 4,
                     top: 8,
                     child: CircleAvatar(
-                      radius: 8,
+                      radius: 7,
                       backgroundColor: Colors.red,
-                      child: Text('$utentiDaApprovare', style: const TextStyle(color: Colors.white, fontSize: 10)),
+                      child: Text('$utentiDaApprovare', style: const TextStyle(color: Colors.white, fontSize: 9)),
                     ),
                   ),
               ],
             ),
+          const SizedBox(width: 4),
         ],
       ),
       body: SingleChildScrollView(
@@ -961,7 +987,7 @@ class _HomePageState extends State<HomePage> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(_usaMappaTopografica ? '🗺️ Mappa Topografica (Curve di Livello AIB)' : '🗺️ Mappa Standard OpenStreetMap',
+                  Text(_usaMappaTopografica ? '🗺️ Mappa Topografica (Curve di Livello)' : '🗺️ Mappa Standard OpenStreetMap',
                       style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
                   Text('GPS: ${posizioneCorrenteLat.toStringAsFixed(4)}, ${posizioneCorrenteLng.toStringAsFixed(4)}',
                       style: const TextStyle(color: Colors.white70, fontSize: 11)),
@@ -1014,7 +1040,7 @@ class _HomePageState extends State<HomePage> {
                   ElevatedButton.icon(
                     onPressed: _mostraDialogoNuovoIdrante,
                     icon: const Icon(Icons.add, size: 16),
-                    label: const Text('+ Idrante'),
+                    label: const Text('Idrante'),
                     style: ElevatedButton.styleFrom(backgroundColor: Colors.blue[700], foregroundColor: Colors.white),
                   ),
                 ],
