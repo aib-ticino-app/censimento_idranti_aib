@@ -62,6 +62,7 @@ class AuthPage extends StatefulWidget {
 class _AuthPageState extends State<AuthPage> {
   bool isLogin = true;
   bool loading = false;
+  bool ricordaAccesso = true; // Spunta Ricordami attiva di default
 
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -199,7 +200,17 @@ class _AuthPageState extends State<AuthPage> {
                   ],
                   TextField(controller: _emailController, decoration: const InputDecoration(labelText: 'Email *')),
                   TextField(controller: _passwordController, obscureText: true, decoration: const InputDecoration(labelText: 'Password *')),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 8),
+                  if (isLogin)
+                    CheckboxListTile(
+                      title: const Text('Ricordami (Mantieni accesso)', style: TextStyle(fontSize: 13)),
+                      value: ricordaAccesso,
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      controlAffinity: ListTileControlAffinity.leading,
+                      onChanged: (v) => setState(() => ricordaAccesso = v ?? true),
+                    ),
+                  const SizedBox(height: 12),
                   if (loading)
                     const CircularProgressIndicator()
                   else
@@ -241,7 +252,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   String _filtroSelezionato = 'Tutti';
-  bool _usaMappaTopografica = true; // Attiva di default OpenTopoMap con curve di livello
+  bool _usaMappaTopografica = false; // Di default parte su mappa standard (OpenStreetMap)
 
   double posizioneCorrenteLat = 45.6512;
   double posizioneCorrenteLng = 8.7123;
@@ -964,13 +975,11 @@ class _HomePageState extends State<HomePage> {
                 options: MapOptions(initialCenter: LatLng(posizioneCorrenteLat, posizioneCorrenteLng), initialZoom: 13.5),
                 children: [
                   TileLayer(
-                    // Seleziona OpenTopoMap per avere curve di livello e sentieri, altrimenti OpenStreetMap standard
                     urlTemplate: _usaMappaTopografica
                         ? 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png'
                         : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                     subdomains: _usaMappaTopografica ? const ['a', 'b', 'c'] : const [],
                     userAgentPackageName: 'com.example.idranti_aib',
-                    // Configurazione tile caching offline di base
                     maxZoom: 17,
                   ),
                   MarkerLayer(
