@@ -1378,7 +1378,7 @@ class PuntoIdrico {
       hasUni45: map['hasuni45'] == true,
       hasUni70: map['hasuni70'] == true,
       isH24: map['ish24'] ?? true,
-      note: map['note']?.toString() ?? '',
+      note: map['note']?.toString() ?? map['Note']?.toString() ?? '',
     );
   }
 }
