@@ -579,27 +579,39 @@ class _HomePageState extends State<HomePage> {
     String lngGMS = _convertiInWGS84GMS(idrante.longitudine, false);
     String utmStr = _convertiInUTM(idrante.latitudine, idrante.longitudine);
 
-    // Filtra solo gli attacchi realmente presenti, rimuovendo del tutto quelli assenti
     List<String> attacchi = [];
     if (idrante.hasUni45) attacchi.add('UNI 45');
     if (idrante.hasUni70) attacchi.add('UNI 70');
     String attacchiStr = attacchi.isNotEmpty ? attacchi.join(', ') : 'Nessuno';
 
-    String notaStr = idrante.note.isNotEmpty ? '\n📝 Note: ${idrante.note}' : '';
-    String mezziStr = idrante.mezziCompatibili.isNotEmpty ? '\n🚒 Mezzi: ${idrante.mezziCompatibili.join(', ')}' : '';
-    String modStr = idrante.modificatoDa.isNotEmpty ? '\n👤 Ultima modifica: ${idrante.modificatoDa}' : '';
+    // Uso sicuro dei codici Unicode esadecimali per le emoji per evitare corruzioni di codifica
+    String eSirena = String.fromCharCodes([0x1F6A8]);
+    String ePuntina = String.fromCharCodes([0x1F4CC]);
+    String eMappaPin = String.fromCharCodes([0x1F4CD]);
+    String eChiave = String.fromCharCodes([0x1F511]);
+    String eCerchioVerde = String.fromCharCodes([0x1F7E2]);
+    String eIngranaggio = String.fromCharCodes([0x2699]);
+    String ePompiere = String.fromCharCodes([0x1F692]);
+    String eMondo = String.fromCharCodes([0x1F310]);
+    String eMappaMondo = String.fromCharCodes([0x1F5FA]);
+    String eNota = String.fromCharCodes([0x1F4DD]);
+    String eUtente = String.fromCharCodes([0x1F464]);
+
+    String notaStr = idrante.note.isNotEmpty ? '\n$eNota Note: ${idrante.note}' : '';
+    String mezziStr = idrante.mezziCompatibili.isNotEmpty ? '\n$ePompiere Mezzi: ${idrante.mezziCompatibili.join(', ')}' : '';
+    String modStr = idrante.modificatoDa.isNotEmpty ? '\n$eUtente Ultima modifica: ${idrante.modificatoDa}' : '';
 
     String testo = '''
-🚨 PUNTO IDRICO AIB
-📌 Codice: ${idrante.codice} (${idrante.tipo})
-📍 Ubicazione: ${idrante.ubicazione}
-🔑 Accesso: ${idrante.isH24 ? "H24" : "Privato"}
-🟢 Stato: ${idrante.stato}
-⚙️ Attacchi: $attacchiStr$mezziStr$notaStr$modStr
+$eSirena PUNTO IDRICO AIB
+$ePuntina Codice: ${idrante.codice} (${idrante.tipo})
+$eMappaPin Ubicazione: ${idrante.ubicazione}
+$eChiave Accesso: ${idrante.isH24 ? "H24" : "Privato"}
+$eCerchioVerde Stato: ${idrante.stato}
+$eIngranaggio Attacchi: $attacchiStr$mezziStr$notaStr$modStr
 
-🌐 WGS84: $latGMS - $lngGMS
+$eMondo WGS84: $latGMS - $lngGMS
 📐 UTM: $utmStr
-🗺️ Mappa: https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.longitudine}
+$eMappaMondo Mappa: https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.longitudine}
 ''';
 
     final Uri whatsappUrl = Uri.parse('https://wa.me/?text=${Uri.encodeComponent(testo)}');
