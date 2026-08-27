@@ -993,7 +993,7 @@ class _HomePageState extends State<HomePage> {
                                 if (idrante.mezziCompatibili.isNotEmpty)
                                   Text('Mezzi: ${idrante.mezziCompatibili.join(', ')}', style: const TextStyle(fontSize: 11, color: Colors.blueGrey)),
                                 if (idrante.note.isNotEmpty)
-                                  Text('📝 Note: ${idrante.note}', style: const TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: Colors.amber[900])),
+                                  Text('📝 Note: ${idrante.note}', style: TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: Colors.amber[900])),
                                 if (idrante.modificatoDa.isNotEmpty)
                                   Text('Modificato da: ${idrante.modificatoDa}', style: const TextStyle(fontSize: 10, color: Colors.grey)),
                                 const SizedBox(height: 6),
