@@ -180,7 +180,7 @@ class _AuthPageState extends State<AuthPage> {
                       ),
                       const SizedBox(width: 10),
                       Text(
-                        isLogin ? 'Accedi ad AIB Cloud' : 'Registrazione Volontario',
+                        isLogin ? 'Idranti AIB Cloud' : 'Registrazione Volontario',
                         style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                       ),
                     ],
@@ -838,44 +838,39 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _mostraMenuProfilo(BuildContext context) {
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
       builder: (context) {
-        return Padding(
-          padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(context).viewInsets.bottom + 20),
-          child: Column(
+        return AlertDialog(
+          title: const Text('Profilo Operatore AIB'),
+          content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Profilo Operatore AIB', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              const Divider(),
-              const SizedBox(height: 8),
               Text('👤 Nome: ${mioProfilo?['nome_cognome'] ?? "N/D"}', style: const TextStyle(fontSize: 15)),
-              const SizedBox(height: 6),
+              const SizedBox(height: 8),
               Text('🚒 Distaccamento: ${mioProfilo?['distaccamento'] ?? "N/D"}', style: const TextStyle(fontSize: 15)),
-              const SizedBox(height: 6),
+              const SizedBox(height: 8),
               Text('🏷️ Sigla Operativa: ${mioProfilo?['sigla'] ?? "N/D"}', style: const TextStyle(fontSize: 15)),
-              const SizedBox(height: 6),
+              const SizedBox(height: 8),
               Text('⭐ Ruolo: ${mioProfilo?['ruolo'] ?? "N/D"}', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.blue)),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () async {
-                    Navigator.pop(context);
-                    await Supabase.instance.client.auth.signOut();
-                  },
-                  icon: const Icon(Icons.logout, color: Colors.white),
-                  label: const Text('Disconnetti account'),
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red[700], foregroundColor: Colors.white),
-                ),
-              ),
             ],
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Chiudi'),
+            ),
+            ElevatedButton.icon(
+              onPressed: () async {
+                Navigator.pop(context);
+                await Supabase.instance.client.auth.signOut();
+              },
+              icon: const Icon(Icons.logout, color: Colors.white),
+              label: const Text('Disconnetti'),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red[700], foregroundColor: Colors.white),
+            ),
+          ],
         );
       },
     );
@@ -894,23 +889,11 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(
         backgroundColor: Colors.blue[800],
         foregroundColor: Colors.white,
-        titleSpacing: 4,
-        title: Row(
-          children: [
-            Image.asset(
-              'assets/logo.png',
-              height: 28,
-              errorBuilder: (_, __, ___) => const Icon(Icons.local_fire_department, color: Colors.orange),
-            ),
-            const SizedBox(width: 6),
-            const Flexible(
-              child: Text(
-                'Idranti AIB',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
+        titleSpacing: 8,
+        title: Image.asset(
+          'assets/logo.png',
+          height: 32,
+          errorBuilder: (_, __, ___) => const Icon(Icons.local_fire_department, color: Colors.orange),
         ),
         actions: [
           IconButton(
