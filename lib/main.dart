@@ -6,6 +6,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -74,6 +75,22 @@ class _AuthPageState extends State<AuthPage> {
 
   final List<String> ruoliDisponibili = ['OPERATORE', 'CAPOSQUADRA', 'DOS'];
 
+  @override
+  void initState() {
+    super.initState();
+    _caricaEmailSalvata();
+  }
+
+  Future<void> _caricaEmailSalvata() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedEmail = prefs.getString('saved_email');
+    if (savedEmail != null && savedEmail.isNotEmpty) {
+      setState(() {
+        _emailController.text = savedEmail;
+      });
+    }
+  }
+
   void _mostraMessaggio(String testo, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -86,13 +103,21 @@ class _AuthPageState extends State<AuthPage> {
   Future<void> _eseguiAuth() async {
     setState(() => loading = true);
     final supabase = Supabase.instance.client;
+    final emailTrimmed = _emailController.text.trim();
 
     try {
       if (isLogin) {
         final res = await supabase.auth.signInWithPassword(
-          email: _emailController.text.trim(),
+          email: emailTrimmed,
           password: _passwordController.text.trim(),
         );
+
+        final prefs = await SharedPreferences.getInstance();
+        if (ricordaAccesso) {
+          await prefs.setString('saved_email', emailTrimmed);
+        } else {
+          await prefs.remove('saved_email');
+        }
 
         final prof = await supabase
             .from('profili_utenti')
@@ -116,7 +141,7 @@ class _AuthPageState extends State<AuthPage> {
         }
 
         final res = await supabase.auth.signUp(
-          email: _emailController.text.trim(),
+          email: emailTrimmed,
           password: _passwordController.text.trim(),
         );
 
@@ -1358,25 +1383,25 @@ class PuntoIdrico {
     };
   }
 
-  factory PuntoIdrico.fromMap(Map<String, dynamic> map) {
-    String mezziRaw = map['mezzicompatibili']?.toString() ?? '';
+  factory PuntoIdrico.fromMap(Map<String, dynamic> map5) {
+    String mezziRaw = map5['mezzicompatibili']?.toString() ?? '';
     List<String> mezzi = mezziRaw.isNotEmpty ? mezziRaw.split(',') : [];
 
     return PuntoIdrico(
-      id: map['id']?.toString() ?? '',
-      codice: map['codice']?.toString() ?? 'IDR-00',
-      tipo: map['tipo']?.toString() ?? 'Idrante Soprasuolo',
-      ubicazione: map['ubicazione']?.toString() ?? 'N/D',
-      stato: map['stato']?.toString() ?? 'Funzionante',
-      latitudine: double.tryParse(map['latitudine']?.toString() ?? '0') ?? 0.0,
-      longitudine: double.tryParse(map['longitudine']?.toString() ?? '0') ?? 0.0,
+      id: map5['id']?.toString() ?? '',
+      codice: map5['codice']?.toString() ?? 'IDR-00',
+      tipo: map5['tipo']?.toString() ?? 'Idrante Soprasuolo',
+      ubicazione: map5['ubicazione']?.toString() ?? 'N/D',
+      stato: map5['stato']?.toString() ?? 'Funzionante',
+      latitudine: double.tryParse(map5['latitudine']?.toString() ?? '0') ?? 0.0,
+      longitudine: double.tryParse(map5['longitudine']?.toString() ?? '0') ?? 0.0,
       mezziCompatibili: mezzi,
-      hasUni45: map['hasuni45'] == true,
-      hasUni70: map['hasuni70'] == true,
-      isH24: map['ish24'] ?? true,
-      note: map['note']?.toString() ?? '',
-      creatoDa: map['creato_da']?.toString() ?? '',
-      modificatoDa: map['modificato_da']?.toString() ?? '',
+      hasUni45: map5['hasuni45'] == true,
+      hasUni70: map5['hasuni70'] == true,
+      isH24: map5['ish24'] ?? true,
+      note: map5['note']?.toString() ?? '',
+      creatoDa: map5['creato_da']?.toString() ?? '',
+      modificatoDa: map5['modificato_da']?.toString() ?? '',
     );
   }
 }
