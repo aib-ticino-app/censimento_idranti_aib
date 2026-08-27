@@ -47236,18 +47236,18 @@ g=A.dq(A.b([128273],k),0,null)
 f=A.dq(A.b([128994],k),0,null)
 e=A.dq(A.b([9881],k),0,null)
 d=A.dq(A.b([128658],k),0,null)
-c=A.dq(A.b([127760],k),0,null)
-b=A.dq(A.b([128506],k),0,null)
-a=A.dq(A.b([128221],k),0,null)
-a0=A.dq(A.b([128100],k),0,null)
+c=A.dq(A.b([128221],k),0,null)
+b=A.dq(A.b([128100],k),0,null)
+a=A.dq(A.b([127760],k),0,null)
+a0=A.dq(A.b([128506],k),0,null)
 k=b2.Q
-a1=k.length!==0?"\n"+a+" Note: "+k:""
+a1=k.length!==0?"\n"+c+" Note: "+k:""
 k=b2.w
 a2=k.length!==0?"\n"+d+" Mezzi: "+B.b.be(k,", "):""
 k=b2.at
-a3=k.length!==0?"\n"+a0+" Ultima modifica: "+k:""
+a3=k.length!==0?"\n"+b+" Ultima modifica: "+k:""
 k=b2.z?"H24":"Privato"
-n=j+" PUNTO IDRICO AIB\n"+i+" Codice: "+b2.b+" ("+b2.c+")\n"+h+" Ubicazione: "+b2.d+"\n"+g+" Accesso: "+k+"\n"+f+" Stato: "+b2.e+"\n"+e+" Attacchi: "+l+a2+a1+a3+"\n\n"+c+" WGS84: "+a6+" - "+a8+"\n\ud83d\udcd0 UTM: "+a9+"\n"+b+" Mappa: https://www.google.com/maps/search/?api=1&query="+A.j(a5)+","+A.j(a7)+"\n"
+n=j+" *PUNTO IDRICO AIB*\n"+i+" Codice: "+b2.b+" ("+b2.c+")\n"+h+" Ubicazione: "+b2.d+"\n"+g+" Accesso: "+k+"\n"+f+" Stato: "+b2.e+"\n"+e+" Attacchi: "+l+a2+a1+a3+"\n\n"+a+" WGS84: "+a6+" - "+a8+"\n\ud83d\udcd0 UTM: "+a9+"\n"+a0+" Mappa: https://www.google.com/maps/search/?api=1&query="+A.j(a5)+","+A.j(a7)+"\n"
 m=A.cE("https://wa.me/?text="+A.tR(2,n,B.T,!1),0,null)
 q=3
 s=9

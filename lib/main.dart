@@ -574,7 +574,7 @@ class _HomePageState extends State<HomePage> {
     return '32$banda ${easting.toStringAsFixed(0)} E, ${northing.toStringAsFixed(0)} N';
   }
 
-  void _condividiPuntoIdrico(PuntoIdrico idrante) async {
+ void _condividiPuntoIdrico(PuntoIdrico idrante) async {
     String latGMS = _convertiInWGS84GMS(idrante.latitudine, true);
     String lngGMS = _convertiInWGS84GMS(idrante.longitudine, false);
     String utmStr = _convertiInUTM(idrante.latitudine, idrante.longitudine);
@@ -584,34 +584,34 @@ class _HomePageState extends State<HomePage> {
     if (idrante.hasUni70) attacchi.add('UNI 70');
     String attacchiStr = attacchi.isNotEmpty ? attacchi.join(', ') : 'Nessuno';
 
-    // Uso sicuro dei codici Unicode esadecimali per le emoji per evitare corruzioni di codifica
-    String eSirena = String.fromCharCodes([0x1F6A8]);
-    String ePuntina = String.fromCharCodes([0x1F4CC]);
-    String eMappaPin = String.fromCharCodes([0x1F4CD]);
-    String eChiave = String.fromCharCodes([0x1F511]);
-    String eCerchioVerde = String.fromCharCodes([0x1F7E2]);
-    String eIngranaggio = String.fromCharCodes([0x2699]);
-    String ePompiere = String.fromCharCodes([0x1F692]);
-    String eMondo = String.fromCharCodes([0x1F310]);
-    String eMappaMondo = String.fromCharCodes([0x1F5FA]);
-    String eNota = String.fromCharCodes([0x1F4DD]);
-    String eUtente = String.fromCharCodes([0x1F464]);
+    // Codici esadecimali puri delle emoji, immuni da qualsiasi errore di codifica Windows
+    String sSirena = String.fromCharCodes([0x1F6A8]);
+    String sPin = String.fromCharCodes([0x1F4CC]);
+    String sLocalita = String.fromCharCodes([0x1F4CD]);
+    String sChiave = String.fromCharCodes([0x1F511]);
+    String sVerde = String.fromCharCodes([0x1F7E2]);
+    String sIngranaggio = String.fromCharCodes([0x2699]);
+    String sPompiere = String.fromCharCodes([0x1F692]);
+    String sNoteIco = String.fromCharCodes([0x1F4DD]);
+    String sUserIco = String.fromCharCodes([0x1F464]);
+    String sMondo = String.fromCharCodes([0x1F310]);
+    String sMappa = String.fromCharCodes([0x1F5FA]);
 
-    String notaStr = idrante.note.isNotEmpty ? '\n$eNota Note: ${idrante.note}' : '';
-    String mezziStr = idrante.mezziCompatibili.isNotEmpty ? '\n$ePompiere Mezzi: ${idrante.mezziCompatibili.join(', ')}' : '';
-    String modStr = idrante.modificatoDa.isNotEmpty ? '\n$eUtente Ultima modifica: ${idrante.modificatoDa}' : '';
+    String notaStr = idrante.note.isNotEmpty ? '\n$sNoteIco Note: ${idrante.note}' : '';
+    String mezziStr = idrante.mezziCompatibili.isNotEmpty ? '\n$sPompiere Mezzi: ${idrante.mezziCompatibili.join(', ')}' : '';
+    String modStr = idrante.modificatoDa.isNotEmpty ? '\n$sUserIco Ultima modifica: ${idrante.modificatoDa}' : '';
 
     String testo = '''
-$eSirena PUNTO IDRICO AIB
-$ePuntina Codice: ${idrante.codice} (${idrante.tipo})
-$eMappaPin Ubicazione: ${idrante.ubicazione}
-$eChiave Accesso: ${idrante.isH24 ? "H24" : "Privato"}
-$eCerchioVerde Stato: ${idrante.stato}
-$eIngranaggio Attacchi: $attacchiStr$mezziStr$notaStr$modStr
+$sSirena *PUNTO IDRICO AIB*
+$sPin Codice: ${idrante.codice} (${idrante.tipo})
+$sLocalita Ubicazione: ${idrante.ubicazione}
+$sChiave Accesso: ${idrante.isH24 ? "H24" : "Privato"}
+$sVerde Stato: ${idrante.stato}
+$sIngranaggio Attacchi: $attacchiStr$mezziStr$notaStr$modStr
 
-$eMondo WGS84: $latGMS - $lngGMS
+$sMondo WGS84: $latGMS - $lngGMS
 📐 UTM: $utmStr
-$eMappaMondo Mappa: https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.longitudine}
+$sMappa Mappa: https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.longitudine}
 ''';
 
     final Uri whatsappUrl = Uri.parse('https://wa.me/?text=${Uri.encodeComponent(testo)}');
