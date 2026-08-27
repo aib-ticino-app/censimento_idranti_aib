@@ -304,12 +304,18 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _ottieniPosizioneGPS() async {
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) return;
+    if (!serviceEnabled) {
+      _mostraMessaggio('Attiva il GPS del dispositivo.', isError: true);
+      return;
+    }
 
     LocationPermission permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) return;
+      if (permission == LocationPermission.denied) {
+        _mostraMessaggio('Permesso GPS negato.', isError: true);
+        return;
+      }
     }
 
     try {
@@ -323,8 +329,11 @@ class _HomePageState extends State<HomePage> {
           posizioneCorrenteLng = position.longitude;
         });
         _mapController.move(LatLng(posizioneCorrenteLat, posizioneCorrenteLng), 14.5);
+        _mostraMessaggio('Posizione GPS aggiornata!');
       }
-    } catch (_) {}
+    } catch (_) {
+      _mostraMessaggio('Impossibile rilevare la posizione GPS.', isError: true);
+    }
   }
 
   Map<String, String> get _headers => {
@@ -347,8 +356,10 @@ class _HomePageState extends State<HomePage> {
         setState(() {
           listaIdranti = data.map((item) => PuntoIdrico.fromMap(item)).toList();
         });
+        _mostraMessaggio('Dati aggiornati da Supabase!');
       }
     } catch (_) {
+      _mostraMessaggio('Errore di connessione.', isError: true);
     } finally {
       setState(() => _caricamentoCloud = false);
     }
@@ -359,6 +370,7 @@ class _HomePageState extends State<HomePage> {
     try {
       final dataMap = idrante.toMap();
       dataMap['creato_da'] = '${mioProfilo?['nome_cognome']} (${mioProfilo?['ruolo']})';
+      dataMap['modificato_da'] = '${mioProfilo?['nome_cognome']} (${mioProfilo?['ruolo']})';
 
       final response = await http.post(
         Uri.parse('$supabaseUrl/rest/v1/idranti'),
@@ -402,16 +414,21 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _cambiaStatoIdrante(PuntoIdrico idrante, String nuovoStato) async {
     setState(() => idrante.stato = nuovoStato);
+    String operatoreCorrente = mioProfilo != null 
+        ? '${mioProfilo!['nome_cognome']} (${mioProfilo!['ruolo']})' 
+        : 'Operatore AIB';
+
     try {
       await http.patch(
         Uri.parse('$supabaseUrl/rest/v1/idranti?id=eq.${idrante.id}'),
         headers: _headers,
         body: json.encode({
           'stato': nuovoStato,
-          'modificato_da': '${mioProfilo?['nome_cognome']} (${mioProfilo?['ruolo']})',
+          'modificato_da': operatoreCorrente,
         }),
       );
-      _mostraMessaggio('Stato aggiornato a "$nuovoStato"');
+      _caricaIdrantiDaSupabase();
+      _mostraMessaggio('Stato aggiornato a "$nuovoStato" da $operatoreCorrente');
     } catch (_) {}
   }
 
@@ -428,12 +445,37 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  void _confermaEliminazioneIdrante(PuntoIdrico idrante) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Conferma Eliminazione'),
+        content: Text('Vuoi eliminare la voce ${idrante.codice} (${idrante.ubicazione})?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Annulla'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              _eliminaIdranteDaSupabase(idrante);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            child: const Text('Elimina'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _mostraMessaggio(String testo, {bool isError = false}) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(testo),
         backgroundColor: isError ? Colors.red[800] : Colors.green[800],
+        duration: const Duration(seconds: 2),
       ),
     );
   }
@@ -462,6 +504,7 @@ class _HomePageState extends State<HomePage> {
     String attacchiStr = attacchi.join(', ');
     String notaStr = idrante.note.isNotEmpty ? '\n📝 *Note:* ${idrante.note}' : '';
     String mezziStr = idrante.mezziCompatibili.isNotEmpty ? '\n🚒 *Mezzi:* ${idrante.mezziCompatibili.join(', ')}' : '';
+    String modStr = idrante.modificatoDa.isNotEmpty ? '\n👤 *Ultima modifica:* ${idrante.modificatoDa}' : '';
 
     String testo = '''
 🚨 *PUNTO IDRICO AIB*
@@ -469,7 +512,7 @@ class _HomePageState extends State<HomePage> {
 📍 *Ubicazione:* ${idrante.ubicazione}
 🔑 *Accesso:* ${idrante.isH24 ? "H24" : "Privato"}
 🟢 *Stato:* ${idrante.stato}
-⚙️ *Attacchi:* $attacchiStr$mezziStr$notaStr
+⚙️ *Attacchi:* $attacchiStr$mezziStr$notaStr$modStr
 
 🌐 *WGS84:* $latGMS - $lngGMS
 🗺️ *Mappa:* https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.longitudine}
@@ -484,6 +527,74 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  Color _getColoreStato(String stato) {
+    switch (stato) {
+      case 'Non Funzionante':
+        return Colors.red[700]!;
+      case 'Da Verificare':
+        return Colors.orange[800]!;
+      default:
+        return Colors.green[700]!;
+    }
+  }
+
+  Widget _buildIconaSimbolo(PuntoIdrico idrante, {double size = 20, Color? overrideColor}) {
+    if (idrante.stato == 'Non Funzionante') {
+      return Icon(Icons.close, size: size, color: overrideColor ?? Colors.white);
+    }
+    if (idrante.stato == 'Da Verificare') {
+      return Icon(Icons.question_mark, size: size * 0.8, color: overrideColor ?? Colors.white);
+    }
+    if (idrante.tipo.contains('Vasca')) return IconaVascaAIB(size: size);
+    if (idrante.tipo.contains('Presa')) return Icon(Icons.waves, size: size, color: overrideColor ?? Colors.white);
+    return Icon(Icons.fire_hydrant_alt, size: size, color: overrideColor ?? Colors.white);
+  }
+
+  Future<void> _avviaNavigatoreReale(double lat, double lng) async {
+    final Uri googleMapsUrl = Uri.parse('https://www.google.com/maps/dir/?api=1&destination=$lat,$lng&travelmode=driving');
+    if (await canLaunchUrl(googleMapsUrl)) {
+      await launchUrl(googleMapsUrl, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  void _richiediEAvviaNavigazione(PuntoIdrico idrante) {
+    if (idrante.stato == 'Non Funzionante') {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: Colors.red, size: 28),
+              SizedBox(width: 8),
+              Expanded(child: Text('Punto Non Funzionante')),
+            ],
+          ),
+          content: Text(
+            'ATTENZIONE:\nIl punto idrico ${idrante.codice} è attualmente segnalato come "NON FUNZIONANTE".\n\nVuoi comunque avviare il navigatore verso questa posizione?',
+            style: const TextStyle(fontSize: 14),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Annulla'),
+            ),
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.of(ctx).pop();
+                _avviaNavigatoreReale(idrante.latitudine, idrante.longitudine);
+              },
+              icon: const Icon(Icons.navigation, color: Colors.white),
+              label: const Text('Naviga Comunque'),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red[700], foregroundColor: Colors.white),
+            ),
+          ],
+        ),
+      );
+    } else {
+      _avviaNavigatoreReale(idrante.latitudine, idrante.longitudine);
+    }
+  }
+
   void _mostraDettaglioIdrante(PuntoIdrico idrante, double distanzaKm) {
     _mapController.move(LatLng(idrante.latitudine, idrante.longitudine), 15.0);
     String latGMS = _convertiInWGS84GMS(idrante.latitudine, true);
@@ -492,7 +603,13 @@ class _HomePageState extends State<HomePage> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Dettaglio ${idrante.codice}'),
+        title: Row(
+          children: [
+            CircleAvatar(radius: 14, backgroundColor: _getColoreStato(idrante.stato), child: _buildIconaSimbolo(idrante, size: 14)),
+            const SizedBox(width: 8),
+            Expanded(child: Text('Dettaglio ${idrante.codice}')),
+          ],
+        ),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -502,7 +619,7 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(height: 6),
               Text('Ubicazione: ${idrante.ubicazione}'),
               const SizedBox(height: 6),
-              Text('Stato: ${idrante.stato}'),
+              Text('Stato: ${idrante.stato}', style: TextStyle(fontWeight: FontWeight.bold, color: _getColoreStato(idrante.stato))),
               const SizedBox(height: 6),
               Text('Accesso: ${idrante.isH24 ? "H24 (Pubblico)" : "Proprietà Privata"}'),
               const SizedBox(height: 6),
@@ -530,6 +647,10 @@ class _HomePageState extends State<HomePage> {
                   child: Text('📝 Note: ${idrante.note}', style: const TextStyle(fontSize: 12)),
                 ),
               ],
+              if (idrante.modificatoDa.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text('Ultima modifica: ${idrante.modificatoDa}', style: const TextStyle(fontSize: 10, color: Colors.grey)),
+              ]
             ],
           ),
         ),
@@ -539,12 +660,14 @@ class _HomePageState extends State<HomePage> {
           ElevatedButton.icon(
             onPressed: () {
               Navigator.of(ctx).pop();
-              final Uri navUrl = Uri.parse('https://www.google.com/maps/dir/?api=1&destination=${idrante.latitudine},${idrante.longitudine}&travelmode=driving');
-              launchUrl(navUrl, mode: LaunchMode.externalApplication);
+              _richiediEAvviaNavigazione(idrante);
             },
             icon: const Icon(Icons.navigation, color: Colors.white),
             label: const Text('Naviga'),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.blue[700], foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: idrante.stato == 'Non Funzionante' ? Colors.red[700] : Colors.blue[700],
+              foregroundColor: Colors.white,
+            ),
           ),
         ],
       ),
@@ -725,6 +848,16 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.my_location),
+            onPressed: _ottieniPosizioneGPS,
+            tooltip: 'Aggiorna Posizione GPS',
+          ),
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _caricaIdrantiDaSupabase,
+            tooltip: 'Ricarica da Supabase',
+          ),
           if (mioProfilo != null) _buildBadgeCasco(mioProfilo!['ruolo']),
           if (mioProfilo?['ruolo'] == 'AMMINISTRATORE')
             Stack(
@@ -756,6 +889,19 @@ class _HomePageState extends State<HomePage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (_caricamentoCloud) const LinearProgressIndicator(color: Colors.orange),
+            Container(
+              height: 36,
+              color: Colors.blue[900],
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Parco Ticino - Supabase Cloud', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                  Text('GPS: ${posizioneCorrenteLat.toStringAsFixed(4)}, ${posizioneCorrenteLng.toStringAsFixed(4)}',
+                      style: const TextStyle(color: Colors.white70, fontSize: 11)),
+                ],
+              ),
+            ),
             SizedBox(
               height: 240,
               child: FlutterMap(
@@ -775,8 +921,8 @@ class _HomePageState extends State<HomePage> {
                           child: GestureDetector(
                             onTap: () => _mostraDettaglioIdrante(idrante, _calcolaDistanzaKm(posizioneCorrenteLat, posizioneCorrenteLng, idrante.latitudine, idrante.longitudine)),
                             child: CircleAvatar(
-                              backgroundColor: idrante.stato == 'Non Funzionante' ? Colors.red : Colors.green,
-                              child: const Icon(Icons.local_fire_department, color: Colors.white, size: 16),
+                              backgroundColor: _getColoreStato(idrante.stato),
+                              child: _buildIconaSimbolo(idrante, size: 18),
                             ),
                           ),
                         );
@@ -824,8 +970,8 @@ class _HomePageState extends State<HomePage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           CircleAvatar(
-                            backgroundColor: idrante.stato == 'Non Funzionante' ? Colors.red : Colors.green,
-                            child: const Icon(Icons.local_fire_department, color: Colors.white),
+                            backgroundColor: _getColoreStato(idrante.stato),
+                            child: _buildIconaSimbolo(idrante, size: 18),
                           ),
                           const SizedBox(width: 10),
                           Expanded(
@@ -846,8 +992,10 @@ class _HomePageState extends State<HomePage> {
                                 ),
                                 if (idrante.mezziCompatibili.isNotEmpty)
                                   Text('Mezzi: ${idrante.mezziCompatibili.join(', ')}', style: const TextStyle(fontSize: 11, color: Colors.blueGrey)),
-                                if (idrante.creatoDa.isNotEmpty)
-                                  Text('Censito da: ${idrante.creatoDa}', style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                                if (idrante.note.isNotEmpty)
+                                  Text('📝 Note: ${idrante.note}', style: const TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: Colors.amber[900])),
+                                if (idrante.modificatoDa.isNotEmpty)
+                                  Text('Modificato da: ${idrante.modificatoDa}', style: const TextStyle(fontSize: 10, color: Colors.grey)),
                                 const SizedBox(height: 6),
                                 Row(
                                   children: [
@@ -858,7 +1006,7 @@ class _HomePageState extends State<HomePage> {
                                       ),
                                     if (possoModificareEEliminare)
                                       InkWell(
-                                        onTap: () => _eliminaIdranteDaSupabase(idrante),
+                                        onTap: () => _confermaEliminazioneIdrante(idrante),
                                         child: const Padding(padding: EdgeInsets.only(right: 12.0), child: Icon(Icons.delete, size: 20, color: Colors.red)),
                                       ),
                                     PopupMenuButton<String>(
@@ -868,6 +1016,7 @@ class _HomePageState extends State<HomePage> {
                                       itemBuilder: (_) => [
                                         const PopupMenuItem(value: 'Funzionante', child: Text('Funzionante')),
                                         const PopupMenuItem(value: 'Non Funzionante', child: Text('Non Funzionante')),
+                                        const PopupMenuItem(value: 'Da Verificare', child: Text('Da Verificare')),
                                       ],
                                     ),
                                     InkWell(
@@ -964,6 +1113,7 @@ class _HomePageState extends State<HomePage> {
                   isH24: isH24,
                   mezziCompatibili: selMezzi,
                   note: _noteController.text,
+                  modificatoDa: mioProfilo != null ? '${mioProfilo!['nome_cognome']} (${mioProfilo!['ruolo']})' : '',
                 );
                 Navigator.of(ctx).pop();
                 _salvaIdranteSuSupabase(nuovo);
@@ -1043,6 +1193,7 @@ class _HomePageState extends State<HomePage> {
                   isH24: isH24,
                   mezziCompatibili: selMezzi,
                   note: _noteController.text,
+                  modificatoDa: mioProfilo != null ? '${mioProfilo!['nome_cognome']} (${mioProfilo!['ruolo']})' : '',
                 );
                 Navigator.of(ctx).pop();
                 _aggiornaIdranteSuSupabase(agg);
@@ -1052,6 +1203,25 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class IconaVascaAIB extends StatelessWidget {
+  final double size;
+  const IconaVascaAIB({super.key, this.size = 18});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Colors.blue[300],
+        border: Border.all(color: Colors.white, width: 2),
+      ),
+      child: Center(child: Icon(Icons.waves, size: size * 0.6, color: Colors.white)),
     );
   }
 }
@@ -1102,6 +1272,7 @@ class PuntoIdrico {
       'hasuni70': hasUni70,
       'ish24': isH24,
       'note': note,
+      'modificato_da': modificatoDa,
     };
   }
 
