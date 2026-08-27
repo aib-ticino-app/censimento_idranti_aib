@@ -15,7 +15,13 @@ const String supabaseApiKey =
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Supabase.initialize(url: supabaseUrl, anonKey: supabaseApiKey);
+  await Supabase.initialize(
+    url: supabaseUrl,
+    anonKey: supabaseApiKey,
+    authOptions: const FlutterAuthClientOptions(
+      authFlowType: AuthFlowType.pkce,
+    ),
+  );
   runApp(const MyApp());
 }
 
@@ -32,21 +38,18 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.green,
         useMaterial3: true,
       ),
-      home: const AuthWrapper(),
+      // Controlla direttamente se c'è una sessione attiva memorizzata sul dispositivo
+      home: StreamBuilder<AuthState>(
+        stream: Supabase.instance.client.auth.onAuthStateChange,
+        builder: (context, snapshot) {
+          final session = Supabase.instance.client.auth.currentSession;
+          if (session != null) {
+            return const HomePage();
+          }
+          return const AuthPage();
+        },
+      ),
     );
-  }
-}
-
-class AuthWrapper extends StatelessWidget {
-  const AuthWrapper({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final session = Supabase.instance.client.auth.currentSession;
-    if (session == null) {
-      return const AuthPage();
-    }
-    return const HomePage();
   }
 }
 
@@ -104,9 +107,7 @@ class _AuthPageState extends State<AuthPage> {
           return;
         }
 
-        if (mounted) {
-          Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const HomePage()));
-        }
+        // Lo StreamBuilder gestirà automaticamente il passaggio alla HomePage
       } else {
         if (_nomeController.text.isEmpty ||
             _cognomeController.text.isEmpty ||
@@ -823,6 +824,49 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  void _mostraMenuProfilo(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.all(20),
+          mainAxisSize: MainAxisSize.min,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Profilo Operatore AIB', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const Divider(),
+              const SizedBox(height: 8),
+              Text('👤 Nome: ${mioProfilo?['nome_cognome'] ?? "N/D"}', style: const TextStyle(fontSize: 15)),
+              const SizedBox(height: 6),
+              Text('🚒 Distaccamento: ${mioProfilo?['distaccamento'] ?? "N/D"}', style: const TextStyle(fontSize: 15)),
+              const SizedBox(height: 6),
+              Text('🏷️ Sigla Operativa: ${mioProfilo?['sigla'] ?? "N/D"}', style: const TextStyle(fontSize: 15)),
+              const SizedBox(height: 6),
+              Text('⭐ Ruolo: ${mioProfilo?['ruolo'] ?? "N/D"}', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.blue)),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () async {
+                    Navigator.pop(context);
+                    await Supabase.instance.client.auth.signOut();
+                  },
+                  icon: const Icon(Icons.logout, color: Colors.white),
+                  label: const Text('Disconnetti account'),
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red[700], foregroundColor: Colors.white),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   bool get possoModificareEEliminare {
     final r = mioProfilo?['ruolo'];
     return r == 'CAPOSQUADRA' || r == 'DOS' || r == 'AMMINISTRATORE';
@@ -858,7 +902,21 @@ class _HomePageState extends State<HomePage> {
             onPressed: _caricaIdrantiDaSupabase,
             tooltip: 'Ricarica da Supabase',
           ),
-          if (mioProfilo != null) _buildBadgeCasco(mioProfilo!['ruolo']),
+          if (mioProfilo != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4.0),
+              child: Center(
+                child: InkWell(
+                  onTap: () => _mostraMenuProfilo(context),
+                  child: Row(
+                    children: [
+                      _buildBadgeCasco(mioProfilo!['ruolo']),
+                      const Icon(Icons.arrow_drop_down, color: Colors.white),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           if (mioProfilo?['ruolo'] == 'AMMINISTRATORE')
             Stack(
               children: [
@@ -875,13 +933,6 @@ class _HomePageState extends State<HomePage> {
                   ),
               ],
             ),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              await Supabase.instance.client.auth.signOut();
-              Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const AuthPage()));
-            },
-          ),
         ],
       ),
       body: SingleChildScrollView(
