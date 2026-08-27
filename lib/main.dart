@@ -64,6 +64,7 @@ class _AuthPageState extends State<AuthPage> {
   bool isLogin = true;
   bool loading = false;
   bool ricordaAccesso = true;
+  bool _oscuraPassword = true; // Stato per mostrare/nascondere la password
 
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -228,7 +229,17 @@ class _AuthPageState extends State<AuthPage> {
                     const SizedBox(height: 10),
                   ],
                   TextField(controller: _emailController, decoration: const InputDecoration(labelText: 'Email *')),
-                  TextField(controller: _passwordController, obscureText: true, decoration: const InputDecoration(labelText: 'Password *')),
+                  TextField(
+                    controller: _passwordController,
+                    obscureText: _oscuraPassword,
+                    decoration: InputDecoration(
+                      labelText: 'Password *',
+                      suffixIcon: IconButton(
+                        icon: Icon(_oscuraPassword ? Icons.visibility_off : Icons.visibility),
+                        onPressed: () => setState(() => _oscuraPassword = !_oscuraPassword),
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 8),
                   if (isLogin)
                     CheckboxListTile(
@@ -574,7 +585,7 @@ class _HomePageState extends State<HomePage> {
     return '32$banda ${easting.toStringAsFixed(0)} E, ${northing.toStringAsFixed(0)} N';
   }
 
- void _condividiPuntoIdrico(PuntoIdrico idrante) async {
+  void _condividiPuntoIdrico(PuntoIdrico idrante) async {
     String latGMS = _convertiInWGS84GMS(idrante.latitudine, true);
     String lngGMS = _convertiInWGS84GMS(idrante.longitudine, false);
     String utmStr = _convertiInUTM(idrante.latitudine, idrante.longitudine);
@@ -584,21 +595,34 @@ class _HomePageState extends State<HomePage> {
     if (idrante.hasUni70) attacchi.add('UNI 70');
     String attacchiStr = attacchi.isNotEmpty ? attacchi.join(', ') : 'Nessuno';
 
-    String notaStr = idrante.note.isNotEmpty ? '\n- Note: ${idrante.note}' : '';
-    String mezziStr = idrante.mezziCompatibili.isNotEmpty ? '\n- Mezzi: ${idrante.mezziCompatibili.join(', ')}' : '';
-    String modStr = idrante.modificatoDa.isNotEmpty ? '\n- Ultima modifica: ${idrante.modificatoDa}' : '';
+    // Emoji protette con codici esadecimali puri per evitare qualsiasi corruzione di Windows
+    String eSirena = String.fromCharCodes([0x1F6A8]);
+    String ePuntina = String.fromCharCodes([0x1F4CC]);
+    String eMappaPin = String.fromCharCodes([0x1F4CD]);
+    String eChiave = String.fromCharCodes([0x1F511]);
+    String eCerchioVerde = String.fromCharCodes([0x1F7E2]);
+    String eIngranaggio = String.fromCharCodes([0x2699]);
+    String ePompiere = String.fromCharCodes([0x1F692]);
+    String eMondo = String.fromCharCodes([0x1F310]);
+    String eMappaMondo = String.fromCharCodes([0x1F5FA]);
+    String eNota = String.fromCharCodes([0x1F4DD]);
+    String eUtente = String.fromCharCodes([0x1F464]);
+
+    String notaStr = idrante.note.isNotEmpty ? '\n$eNota Note: ${idrante.note}' : '';
+    String mezziStr = idrante.mezziCompatibili.isNotEmpty ? '\n$ePompiere Mezzi: ${idrante.mezziCompatibili.join(', ')}' : '';
+    String modStr = idrante.modificatoDa.isNotEmpty ? '\n$eUtente Ultima modifica: ${idrante.modificatoDa}' : '';
 
     String testo = '''
-*PUNTO IDRICO AIB*
-- Codice: ${idrante.codice} (${idrante.tipo})
-- Ubicazione: ${idrante.ubicazione}
-- Accesso: ${idrante.isH24 ? "H24" : "Privato"}
-- Stato: ${idrante.stato}
-- Attacchi: $attacchiStr$mezziStr$notaStr$modStr
+$eSirena *PUNTO IDRICO AIB*
+$ePuntina Codice: ${idrante.codice} (${idrante.tipo})
+$eMappaPin Ubicazione: ${idrante.ubicazione}
+$eChiave Accesso: ${idrante.isH24 ? "H24" : "Privato"}
+$eCerchioVerde Stato: ${idrante.stato}
+$eIngranaggio Attacchi: $attacchiStr$mezziStr$notaStr$modStr
 
-- WGS84: $latGMS - $lngGMS
-- UTM: $utmStr
-- Mappa: https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.longitudine}
+$eMondo WGS84: $latGMS - $lngGMS
+📐 UTM: $utmStr
+$eMappaMondo Mappa: https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.longitudine}
 ''';
 
     final Uri whatsappDirectUri = Uri.parse('whatsapp://send?text=${Uri.encodeComponent(testo)}');
