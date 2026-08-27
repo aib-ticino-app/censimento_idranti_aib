@@ -38,7 +38,6 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.green,
         useMaterial3: true,
       ),
-      // Controlla direttamente se c'è una sessione attiva memorizzata sul dispositivo
       home: StreamBuilder<AuthState>(
         stream: Supabase.instance.client.auth.onAuthStateChange,
         builder: (context, snapshot) {
@@ -106,8 +105,6 @@ class _AuthPageState extends State<AuthPage> {
           setState(() => loading = false);
           return;
         }
-
-        // Lo StreamBuilder gestirà automaticamente il passaggio alla HomePage
       } else {
         if (_nomeController.text.isEmpty ||
             _cognomeController.text.isEmpty ||
@@ -831,10 +828,10 @@ class _HomePageState extends State<HomePage> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (context) {
-        return Container(
+        return Padding(
           padding: const EdgeInsets.all(20),
-          mainAxisSize: MainAxisSize.min,
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text('Profilo Operatore AIB', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
