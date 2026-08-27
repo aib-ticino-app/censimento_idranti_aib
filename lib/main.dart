@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -75,6 +76,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+    _ottieniPosizioneGPS();
     _caricaIdrantiDaSupabase();
   }
 
@@ -89,9 +91,43 @@ class _HomePageState extends State<HomePage> {
     super.dispose();
   }
 
-  void _ottieniPosizioneGPS() {
-    _mapController.move(LatLng(posizioneCorrenteLat, posizioneCorrenteLng), 14.0);
-    _mostraMessaggio('Mappa centrata sulla posizione predefinita');
+  Future<void> _ottieniPosizioneGPS() async {
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      _mostraMessaggio('Attiva il GPS del dispositivo.', isError: true);
+      return;
+    }
+
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        _mostraMessaggio('Autorizzazione GPS negata.', isError: true);
+        return;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      _mostraMessaggio('Autorizzazione GPS negata dalle impostazioni del telefono.', isError: true);
+      return;
+    }
+
+    try {
+      Position position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+      );
+
+      if (mounted) {
+        setState(() {
+          posizioneCorrenteLat = position.latitude;
+          posizioneCorrenteLng = position.longitude;
+        });
+        _mapController.move(LatLng(posizioneCorrenteLat, posizioneCorrenteLng), 14.5);
+        _mostraMessaggio('Posizione GPS aggiornata!');
+      }
+    } catch (e) {
+      _mostraMessaggio('Impossibile rilevare la posizione GPS.', isError: true);
+    }
   }
 
   Map<String, String> get _headers => {
