@@ -317,8 +317,15 @@ ${idrante.latitudine.toStringAsFixed(6)}, ${idrante.longitudine.toStringAsFixed(
 https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.longitudine}
 ''';
 
-    await Clipboard.setData(ClipboardData(text: testoCondivisione));
-    _mostraMessaggio('Dati del punto idrico copiati negli appunti!');
+    // Prova ad aprire la condivisione nativa tramite la porta intent di Android/WhatsApp
+    final Uri whatsappUrl = Uri.parse('https://api.whatsapp.com/send?text=${Uri.encodeComponent(testoCondivisione)}');
+    
+    if (await canLaunchUrl(whatsappUrl)) {
+      await launchUrl(whatsappUrl, mode: LaunchMode.externalApplication);
+    } else {
+      await Clipboard.setData(ClipboardData(text: testoCondivisione));
+      _mostraMessaggio('Dati del punto idrico copiati negli appunti!');
+    }
   }
 
   String _generaCodiceProgressivo(String tipo) {
@@ -764,7 +771,7 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
           ],
         ),
         actions: [
-          IconButton(icon: const Icon(Icons.copy, color: Colors.green), onPressed: () => _condividiPuntoIdrico(idrante), tooltip: 'Copia Scheda'),
+          IconButton(icon: const Icon(Icons.share, color: Colors.green), onPressed: () => _condividiPuntoIdrico(idrante), tooltip: 'Condividi Scheda'),
           TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Chiudi')),
           ElevatedButton.icon(
             onPressed: () {
@@ -1121,7 +1128,7 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
                                       onTap: () => _condividiPuntoIdrico(idrante),
                                       child: const Padding(
                                         padding: EdgeInsets.symmetric(horizontal: 8.0),
-                                        child: Icon(Icons.copy, size: 20, color: Colors.green),
+                                        child: Icon(Icons.share, size: 20, color: Colors.green),
                                       ),
                                     ),
                                   ],
