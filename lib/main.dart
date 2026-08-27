@@ -574,7 +574,7 @@ class _HomePageState extends State<HomePage> {
     return '32$banda ${easting.toStringAsFixed(0)} E, ${northing.toStringAsFixed(0)} N';
   }
 
- void _condividiPuntoIdrico(PuntoIdrico idrante) async {
+  void _condividiPuntoIdrico(PuntoIdrico idrante) async {
     String latGMS = _convertiInWGS84GMS(idrante.latitudine, true);
     String lngGMS = _convertiInWGS84GMS(idrante.longitudine, false);
     String utmStr = _convertiInUTM(idrante.latitudine, idrante.longitudine);
@@ -584,18 +584,18 @@ class _HomePageState extends State<HomePage> {
     if (idrante.hasUni70) attacchi.add('UNI 70');
     String attacchiStr = attacchi.isNotEmpty ? attacchi.join(', ') : 'Nessuno';
 
-    // Codici esadecimali puri delle emoji, immuni da qualsiasi errore di codifica Windows
-    String sSirena = String.fromCharCodes([0x1F6A8]);
-    String sPin = String.fromCharCodes([0x1F4CC]);
-    String sLocalita = String.fromCharCodes([0x1F4CD]);
-    String sChiave = String.fromCharCodes([0x1F511]);
-    String sVerde = String.fromCharCodes([0x1F7E2]);
-    String sIngranaggio = String.fromCharCodes([0x2699]);
-    String sPompiere = String.fromCharCodes([0x1F692]);
-    String sNoteIco = String.fromCharCodes([0x1F4DD]);
-    String sUserIco = String.fromCharCodes([0x1F464]);
-    String sMondo = String.fromCharCodes([0x1F310]);
-    String sMappa = String.fromCharCodes([0x1F5FA]);
+    // Simboli strutturali professionali a prova di bomba (Proposta 1)
+    String sSirena = '[🚨]';
+    String sPin = '[#]';
+    String sLocalita = '[📍]';
+    String sChiave = '[🔑]';
+    String sVerde = '[🟢]';
+    String sIngranaggio = '[⚙️]';
+    String sPompiere = '[🚒]';
+    String sNoteIco = '[-]';
+    String sUserIco = '[👤]';
+    String sMondo = '[🌐]';
+    String sMappa = '[🗺️]';
 
     String notaStr = idrante.note.isNotEmpty ? '\n$sNoteIco Note: ${idrante.note}' : '';
     String mezziStr = idrante.mezziCompatibili.isNotEmpty ? '\n$sPompiere Mezzi: ${idrante.mezziCompatibili.join(', ')}' : '';
@@ -614,11 +614,14 @@ $sMondo WGS84: $latGMS - $lngGMS
 $sMappa Mappa: https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.longitudine}
 ''';
 
-    final Uri whatsappUrl = Uri.parse('https://wa.me/?text=${Uri.encodeComponent(testo)}');
+    final Uri whatsappDirectUri = Uri.parse('whatsapp://send?text=${Uri.encodeComponent(testo)}');
+    final Uri whatsappWebUri = Uri.parse('https://wa.me/?text=${Uri.encodeComponent(testo)}');
     
     try {
-      if (await canLaunchUrl(whatsappUrl)) {
-        await launchUrl(whatsappUrl, mode: LaunchMode.externalApplication);
+      if (await canLaunchUrl(whatsappDirectUri)) {
+        await launchUrl(whatsappDirectUri, mode: LaunchMode.externalApplication);
+      } else if (await canLaunchUrl(whatsappWebUri)) {
+        await launchUrl(whatsappWebUri, mode: LaunchMode.externalApplication);
       } else {
         await Clipboard.setData(ClipboardData(text: testo));
         _mostraMessaggio('Copiato negli appunti!');
