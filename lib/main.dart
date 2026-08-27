@@ -1,12 +1,10 @@
 import 'dart:convert';
 import 'dart:math';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 void main() {
@@ -283,12 +281,8 @@ ${idrante.latitudine.toStringAsFixed(6)}, ${idrante.longitudine.toStringAsFixed(
 https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.longitudine}
 ''';
 
-    try {
-      await Share.share(testoCondivisione, subject: 'Punto Idrico AIB ${idrante.codice}');
-    } catch (e) {
-      await Clipboard.setData(ClipboardData(text: testoCondivisione));
-      _mostraMessaggio('Dati del punto idrico copiati negli appunti!');
-    }
+    await Clipboard.setData(ClipboardData(text: testoCondivisione));
+    _mostraMessaggio('Dati del punto idrico copiati negli appunti!');
   }
 
   String _generaCodiceProgressivo(String tipo) {
@@ -734,7 +728,7 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
           ],
         ),
         actions: [
-          IconButton(icon: const Icon(Icons.share, color: Colors.green), onPressed: () => _condividiPuntoIdrico(idrante)),
+          IconButton(icon: const Icon(Icons.copy, color: Colors.green), onPressed: () => _condividiPuntoIdrico(idrante), tooltip: 'Copia Scheda'),
           TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Chiudi')),
           ElevatedButton.icon(
             onPressed: () {
@@ -1091,7 +1085,7 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
                                       onTap: () => _condividiPuntoIdrico(idrante),
                                       child: const Padding(
                                         padding: EdgeInsets.symmetric(horizontal: 8.0),
-                                        child: Icon(Icons.share, size: 20, color: Colors.green),
+                                        child: Icon(Icons.copy, size: 20, color: Colors.green),
                                       ),
                                     ),
                                   ],
