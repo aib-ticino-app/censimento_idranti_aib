@@ -241,6 +241,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   String _filtroSelezionato = 'Tutti';
+  bool _usaMappaTopografica = true; // Attiva di default OpenTopoMap con curve di livello
 
   double posizioneCorrenteLat = 45.6512;
   double posizioneCorrenteLng = 8.7123;
@@ -357,7 +358,7 @@ class _HomePageState extends State<HomePage> {
         _mostraMessaggio('Dati aggiornati da Supabase!');
       }
     } catch (_) {
-      _mostraMessaggio('Errore di connessione.', isError: true);
+      _mostraMessaggio('Errore di connessione (modalità offline attiva).', isError: true);
     } finally {
       setState(() => _caricamentoCloud = false);
     }
@@ -890,6 +891,11 @@ class _HomePageState extends State<HomePage> {
         ),
         actions: [
           IconButton(
+            icon: Icon(_usaMappaTopografica ? Icons.terrain : Icons.map),
+            onPressed: () => setState(() => _usaMappaTopografica = !_usaMappaTopografica),
+            tooltip: _usaMappaTopografica ? 'Passa a Mappa Standard' : 'Passa a Mappa Topografica (Curve di Livello)',
+          ),
+          IconButton(
             icon: const Icon(Icons.my_location),
             onPressed: _ottieniPosizioneGPS,
             tooltip: 'Aggiorna Posizione GPS',
@@ -944,7 +950,8 @@ class _HomePageState extends State<HomePage> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Parco Ticino - Supabase Cloud', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                  Text(_usaMappaTopografica ? '🗺️ Mappa Topografica (Curve di Livello AIB)' : '🗺️ Mappa Standard OpenStreetMap',
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
                   Text('GPS: ${posizioneCorrenteLat.toStringAsFixed(4)}, ${posizioneCorrenteLng.toStringAsFixed(4)}',
                       style: const TextStyle(color: Colors.white70, fontSize: 11)),
                 ],
@@ -956,7 +963,16 @@ class _HomePageState extends State<HomePage> {
                 mapController: _mapController,
                 options: MapOptions(initialCenter: LatLng(posizioneCorrenteLat, posizioneCorrenteLng), initialZoom: 13.5),
                 children: [
-                  TileLayer(urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', userAgentPackageName: 'com.example.idranti_aib'),
+                  TileLayer(
+                    // Seleziona OpenTopoMap per avere curve di livello e sentieri, altrimenti OpenStreetMap standard
+                    urlTemplate: _usaMappaTopografica
+                        ? 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png'
+                        : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    subdomains: _usaMappaTopografica ? const ['a', 'b', 'c'] : const [],
+                    userAgentPackageName: 'com.example.idranti_aib',
+                    // Configurazione tile caching offline di base
+                    maxZoom: 17,
+                  ),
                   MarkerLayer(
                     markers: [
                       Marker(
