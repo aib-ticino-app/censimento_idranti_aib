@@ -64,7 +64,7 @@ class _AuthPageState extends State<AuthPage> {
   bool isLogin = true;
   bool loading = false;
   bool ricordaAccesso = true;
-  bool _oscuraPassword = true; // Stato per mostrare/nascondere la password
+  bool _oscuraPassword = true;
 
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -595,18 +595,18 @@ class _HomePageState extends State<HomePage> {
     if (idrante.hasUni70) attacchi.add('UNI 70');
     String attacchiStr = attacchi.isNotEmpty ? attacchi.join(', ') : 'Nessuno';
 
-    // Emoji protette con codici esadecimali puri per evitare qualsiasi corruzione di Windows
-    String eSirena = String.fromCharCodes([0x1F6A8]);
-    String ePuntina = String.fromCharCodes([0x1F4CC]);
-    String eMappaPin = String.fromCharCodes([0x1F4CD]);
-    String eChiave = String.fromCharCodes([0x1F511]);
-    String eCerchioVerde = String.fromCharCodes([0x1F7E2]);
-    String eIngranaggio = String.fromCharCodes([0x2699]);
-    String ePompiere = String.fromCharCodes([0x1F692]);
-    String eMondo = String.fromCharCodes([0x1F310]);
-    String eMappaMondo = String.fromCharCodes([0x1F5FA]);
-    String eNota = String.fromCharCodes([0x1F4DD]);
-    String eUtente = String.fromCharCodes([0x1F464]);
+    // Generazione delle emoji tramite byte UTF-8 puri, completamente immuni a VS Code e Windows
+    String eSirena = utf8.decode([0xF0, 0x9F, 0x9A, 0xA8]);
+    String ePuntina = utf8.decode([0xF0, 0x9F, 0x93, 0x8C]);
+    String eMappaPin = utf8.decode([0xF0, 0x9F, 0x93, 0x8D]);
+    String eChiave = utf8.decode([0xF0, 0x9F, 0x94, 0x91]);
+    String eCerchioVerde = utf8.decode([0xF0, 0x9F, 0x9F, 0xA2]);
+    String eIngranaggio = utf8.decode([0xE2, 0x9A, 0x99, 0xEF, 0xB8, 0x8F]);
+    String ePompiere = utf8.decode([0xF0, 0x9F, 0x9A, 0x92]);
+    String eMondo = utf8.decode([0xF0, 0x9F, 0x8C, 0x90]);
+    String eMappaMondo = utf8.decode([0xF0, 0x9F, 0x9F, 0xBA]); // Usiamo una stringa sicura o icona equivalente
+    String eNota = utf8.decode([0xF0, 0x9F, 0x93, 0x9D]);
+    String eUtente = utf8.decode([0xF0, 0x9F, 0x91, 0xA4]);
 
     String notaStr = idrante.note.isNotEmpty ? '\n$eNota Note: ${idrante.note}' : '';
     String mezziStr = idrante.mezziCompatibili.isNotEmpty ? '\n$ePompiere Mezzi: ${idrante.mezziCompatibili.join(', ')}' : '';
@@ -622,7 +622,7 @@ $eIngranaggio Attacchi: $attacchiStr$mezziStr$notaStr$modStr
 
 $eMondo WGS84: $latGMS - $lngGMS
 📐 UTM: $utmStr
-$eMappaMondo Mappa: https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.longitudine}
+🗺️ Mappa: https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.longitudine}
 ''';
 
     final Uri whatsappDirectUri = Uri.parse('whatsapp://send?text=${Uri.encodeComponent(testo)}');
@@ -951,11 +951,14 @@ $eMappaMondo Mappa: https://www.google.com/maps/search/?api=1&query=${idrante.la
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('👤 Nome: ${mioProfilo?['nome_cognome'] ?? "N/D"}', style: const TextStyle(fontSize: 15)),
+              const Text('👤 Nome: ', style: TextStyle(fontSize: 15)),
+              Text('${mioProfilo?['nome_cognome'] ?? "N/D"}', style: const TextStyle(fontSize: 15)),
               const SizedBox(height: 8),
-              Text('🚒 Distaccamento: ${mioProfilo?['distaccamento'] ?? "N/D"}', style: const TextStyle(fontSize: 15)),
+              const Text('🚒 Distaccamento: ', style: TextStyle(fontSize: 15)),
+              Text('${mioProfilo?['distaccamento'] ?? "N/D"}', style: const TextStyle(fontSize: 15)),
               const SizedBox(height: 8),
-              Text('🏷️ Sigla Operativa: ${mioProfilo?['sigla'] ?? "N/D"}', style: const TextStyle(fontSize: 15)),
+              const Text('🏷️ Sigla Operativa: ', style: TextStyle(fontSize: 15)),
+              Text('${mioProfilo?['sigla'] ?? "N/D"}', style: const TextStyle(fontSize: 15)),
               const SizedBox(height: 8),
               Text('⭐ Ruolo: ${mioProfilo?['ruolo'] ?? "N/D"}', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.blue)),
             ],
@@ -1074,8 +1077,7 @@ $eMappaMondo Mappa: https://www.google.com/maps/search/?api=1&query=${idrante.la
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(_usaMappaTopografica ? '🗺️ Mappa Topografica (Curve di Livello)' : '🗺️ Mappa Standard OpenStreetMap',
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
+                  const Text('🗺️ Mappa AIB', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
                   Text('GPS: ${posizioneCorrenteLat.toStringAsFixed(4)}, ${posizioneCorrenteLng.toStringAsFixed(4)}',
                       style: const TextStyle(color: Colors.white70, fontSize: 11)),
                 ],
@@ -1179,7 +1181,7 @@ $eMappaMondo Mappa: https://www.google.com/maps/search/?api=1&query=${idrante.la
                                 if (idrante.mezziCompatibili.isNotEmpty)
                                   Text('Mezzi: ${idrante.mezziCompatibili.join(', ')}', style: const TextStyle(fontSize: 11, color: Colors.blueGrey)),
                                 if (idrante.note.isNotEmpty)
-                                  Text('📝 Note: ${idrante.note}', style: TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: Colors.amber[900])),
+                                  Text('Note: ${idrante.note}', style: TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: Colors.amber[900])),
                                 if (idrante.modificatoDa.isNotEmpty)
                                   Text('Modificato da: ${idrante.modificatoDa}', style: const TextStyle(fontSize: 10, color: Colors.grey)),
                                 const SizedBox(height: 6),
