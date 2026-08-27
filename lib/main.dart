@@ -595,34 +595,21 @@ class _HomePageState extends State<HomePage> {
     if (idrante.hasUni70) attacchi.add('UNI 70');
     String attacchiStr = attacchi.isNotEmpty ? attacchi.join(', ') : 'Nessuno';
 
-    // Generazione delle emoji tramite byte UTF-8 puri, completamente immuni a VS Code e Windows
-    String eSirena = utf8.decode([0xF0, 0x9F, 0x9A, 0xA8]);
-    String ePuntina = utf8.decode([0xF0, 0x9F, 0x93, 0x8C]);
-    String eMappaPin = utf8.decode([0xF0, 0x9F, 0x93, 0x8D]);
-    String eChiave = utf8.decode([0xF0, 0x9F, 0x94, 0x91]);
-    String eCerchioVerde = utf8.decode([0xF0, 0x9F, 0x9F, 0xA2]);
-    String eIngranaggio = utf8.decode([0xE2, 0x9A, 0x99, 0xEF, 0xB8, 0x8F]);
-    String ePompiere = utf8.decode([0xF0, 0x9F, 0x9A, 0x92]);
-    String eMondo = utf8.decode([0xF0, 0x9F, 0x8C, 0x90]);
-    String eMappaMondo = utf8.decode([0xF0, 0x9F, 0x9F, 0xBA]); // Usiamo una stringa sicura o icona equivalente
-    String eNota = utf8.decode([0xF0, 0x9F, 0x93, 0x9D]);
-    String eUtente = utf8.decode([0xF0, 0x9F, 0x91, 0xA4]);
-
-    String notaStr = idrante.note.isNotEmpty ? '\n$eNota Note: ${idrante.note}' : '';
-    String mezziStr = idrante.mezziCompatibili.isNotEmpty ? '\n$ePompiere Mezzi: ${idrante.mezziCompatibili.join(', ')}' : '';
-    String modStr = idrante.modificatoDa.isNotEmpty ? '\n$eUtente Ultima modifica: ${idrante.modificatoDa}' : '';
+    String notaStr = idrante.note.isNotEmpty ? '\n- Note: ${idrante.note}' : '';
+    String mezziStr = idrante.mezziCompatibili.isNotEmpty ? '\n- Mezzi: ${idrante.mezziCompatibili.join(', ')}' : '';
+    String modStr = idrante.modificatoDa.isNotEmpty ? '\n- Ultima modifica: ${idrante.modificatoDa}' : '';
 
     String testo = '''
-$eSirena *PUNTO IDRICO AIB*
-$ePuntina Codice: ${idrante.codice} (${idrante.tipo})
-$eMappaPin Ubicazione: ${idrante.ubicazione}
-$eChiave Accesso: ${idrante.isH24 ? "H24" : "Privato"}
-$eCerchioVerde Stato: ${idrante.stato}
-$eIngranaggio Attacchi: $attacchiStr$mezziStr$notaStr$modStr
+*PUNTO IDRICO AIB*
+- Codice: ${idrante.codice} (${idrante.tipo})
+- Ubicazione: ${idrante.ubicazione}
+- Accesso: ${idrante.isH24 ? "H24" : "Privato"}
+- Stato: ${idrante.stato}
+- Attacchi: $attacchiStr$mezziStr$notaStr$modStr
 
-$eMondo WGS84: $latGMS - $lngGMS
-📐 UTM: $utmStr
-🗺️ Mappa: https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.longitudine}
+- WGS84: $latGMS - $lngGMS
+- UTM: $utmStr
+- Mappa: https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.longitudine}
 ''';
 
     final Uri whatsappDirectUri = Uri.parse('whatsapp://send?text=${Uri.encodeComponent(testo)}');
@@ -825,7 +812,7 @@ $eMondo WGS84: $latGMS - $lngGMS
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
         decoration: BoxDecoration(color: Colors.purple[800], borderRadius: BorderRadius.circular(4)),
-        child: const Text('🛡️ ADMIN', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+        child: const Text('ADMIN', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
       );
     }
 
@@ -951,16 +938,13 @@ $eMondo WGS84: $latGMS - $lngGMS
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('👤 Nome: ', style: TextStyle(fontSize: 15)),
-              Text('${mioProfilo?['nome_cognome'] ?? "N/D"}', style: const TextStyle(fontSize: 15)),
+              Text('Nome: ${mioProfilo?['nome_cognome'] ?? "N/D"}', style: const TextStyle(fontSize: 15)),
               const SizedBox(height: 8),
-              const Text('🚒 Distaccamento: ', style: TextStyle(fontSize: 15)),
-              Text('${mioProfilo?['distaccamento'] ?? "N/D"}', style: const TextStyle(fontSize: 15)),
+              Text('Distaccamento: ${mioProfilo?['distaccamento'] ?? "N/D"}', style: const TextStyle(fontSize: 15)),
               const SizedBox(height: 8),
-              const Text('🏷️ Sigla Operativa: ', style: TextStyle(fontSize: 15)),
-              Text('${mioProfilo?['sigla'] ?? "N/D"}', style: const TextStyle(fontSize: 15)),
+              Text('Sigla Operativa: ${mioProfilo?['sigla'] ?? "N/D"}', style: const TextStyle(fontSize: 15)),
               const SizedBox(height: 8),
-              Text('⭐ Ruolo: ${mioProfilo?['ruolo'] ?? "N/D"}', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.blue)),
+              Text('Ruolo: ${mioProfilo?['ruolo'] ?? "N/D"}', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.blue)),
             ],
           ),
           actions: [
@@ -1077,7 +1061,7 @@ $eMondo WGS84: $latGMS - $lngGMS
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('🗺️ Mappa AIB', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
+                  const Text('Mappa AIB', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
                   Text('GPS: ${posizioneCorrenteLat.toStringAsFixed(4)}, ${posizioneCorrenteLng.toStringAsFixed(4)}',
                       style: const TextStyle(color: Colors.white70, fontSize: 11)),
                 ],
