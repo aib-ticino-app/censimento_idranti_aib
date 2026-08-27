@@ -574,7 +574,7 @@ class _HomePageState extends State<HomePage> {
     return '32$banda ${easting.toStringAsFixed(0)} E, ${northing.toStringAsFixed(0)} N';
   }
 
-  void _condividiPuntoIdrico(PuntoIdrico idrante) async {
+ void _condividiPuntoIdrico(PuntoIdrico idrante) async {
     String latGMS = _convertiInWGS84GMS(idrante.latitudine, true);
     String lngGMS = _convertiInWGS84GMS(idrante.longitudine, false);
     String utmStr = _convertiInUTM(idrante.latitudine, idrante.longitudine);
@@ -584,34 +584,21 @@ class _HomePageState extends State<HomePage> {
     if (idrante.hasUni70) attacchi.add('UNI 70');
     String attacchiStr = attacchi.isNotEmpty ? attacchi.join(', ') : 'Nessuno';
 
-    // Simboli strutturali professionali a prova di bomba (Proposta 1)
-    String sSirena = '[🚨]';
-    String sPin = '[#]';
-    String sLocalita = '[📍]';
-    String sChiave = '[🔑]';
-    String sVerde = '[🟢]';
-    String sIngranaggio = '[⚙️]';
-    String sPompiere = '[🚒]';
-    String sNoteIco = '[-]';
-    String sUserIco = '[👤]';
-    String sMondo = '[🌐]';
-    String sMappa = '[🗺️]';
-
-    String notaStr = idrante.note.isNotEmpty ? '\n$sNoteIco Note: ${idrante.note}' : '';
-    String mezziStr = idrante.mezziCompatibili.isNotEmpty ? '\n$sPompiere Mezzi: ${idrante.mezziCompatibili.join(', ')}' : '';
-    String modStr = idrante.modificatoDa.isNotEmpty ? '\n$sUserIco Ultima modifica: ${idrante.modificatoDa}' : '';
+    String notaStr = idrante.note.isNotEmpty ? '\n- Note: ${idrante.note}' : '';
+    String mezziStr = idrante.mezziCompatibili.isNotEmpty ? '\n- Mezzi: ${idrante.mezziCompatibili.join(', ')}' : '';
+    String modStr = idrante.modificatoDa.isNotEmpty ? '\n- Ultima modifica: ${idrante.modificatoDa}' : '';
 
     String testo = '''
-$sSirena *PUNTO IDRICO AIB*
-$sPin Codice: ${idrante.codice} (${idrante.tipo})
-$sLocalita Ubicazione: ${idrante.ubicazione}
-$sChiave Accesso: ${idrante.isH24 ? "H24" : "Privato"}
-$sVerde Stato: ${idrante.stato}
-$sIngranaggio Attacchi: $attacchiStr$mezziStr$notaStr$modStr
+*PUNTO IDRICO AIB*
+- Codice: ${idrante.codice} (${idrante.tipo})
+- Ubicazione: ${idrante.ubicazione}
+- Accesso: ${idrante.isH24 ? "H24" : "Privato"}
+- Stato: ${idrante.stato}
+- Attacchi: $attacchiStr$mezziStr$notaStr$modStr
 
-$sMondo WGS84: $latGMS - $lngGMS
-📐 UTM: $utmStr
-$sMappa Mappa: https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.longitudine}
+- WGS84: $latGMS - $lngGMS
+- UTM: $utmStr
+- Mappa: https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.longitudine}
 ''';
 
     final Uri whatsappDirectUri = Uri.parse('whatsapp://send?text=${Uri.encodeComponent(testo)}');
