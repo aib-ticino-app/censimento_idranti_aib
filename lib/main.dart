@@ -1,10 +1,12 @@
 import 'dart:convert';
-import 'dart:html' as html;
 import 'dart:math';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 void main() {
@@ -75,7 +77,6 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    _ottieniPosizioneGPS();
     _caricaIdrantiDaSupabase();
   }
 
@@ -91,17 +92,8 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _ottieniPosizioneGPS() {
-    if (html.window.navigator.geolocation != null) {
-      html.window.navigator.geolocation!.getCurrentPosition().then((pos) {
-        if (pos.coords != null && mounted) {
-          setState(() {
-            posizioneCorrenteLat = pos.coords!.latitude?.toDouble() ?? posizioneCorrenteLat;
-            posizioneCorrenteLng = pos.coords!.longitude?.toDouble() ?? posizioneCorrenteLng;
-          });
-          _mapController.move(LatLng(posizioneCorrenteLat, posizioneCorrenteLng), 14.0);
-        }
-      }).catchError((_) {});
-    }
+    _mapController.move(LatLng(posizioneCorrenteLat, posizioneCorrenteLng), 14.0);
+    _mostraMessaggio('Mappa centrata sulla posizione predefinita');
   }
 
   Map<String, String> get _headers => {
@@ -254,7 +246,7 @@ class _HomePageState extends State<HomePage> {
     return '$gradiStr° $minutiStr\' $secondiStr" $direzione';
   }
 
-  void _condividiPuntoIdrico(PuntoIdrico idrante) {
+  void _condividiPuntoIdrico(PuntoIdrico idrante) async {
     String latGMS = _convertiInWGS84GMS(idrante.latitudine, true);
     String lngGMS = _convertiInWGS84GMS(idrante.longitudine, false);
 
@@ -291,13 +283,10 @@ ${idrante.latitudine.toStringAsFixed(6)}, ${idrante.longitudine.toStringAsFixed(
 https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.longitudine}
 ''';
 
-    if (html.window.navigator.share != null) {
-      html.window.navigator.share({
-        'title': 'Punto Idrico AIB ${idrante.codice}',
-        'text': testoCondivisione,
-      });
-    } else {
-      html.window.navigator.clipboard?.writeText(testoCondivisione);
+    try {
+      await Share.share(testoCondivisione, subject: 'Punto Idrico AIB ${idrante.codice}');
+    } catch (e) {
+      await Clipboard.setData(ClipboardData(text: testoCondivisione));
       _mostraMessaggio('Dati del punto idrico copiati negli appunti!');
     }
   }
