@@ -533,9 +533,52 @@ class _HomePageState extends State<HomePage> {
     return '$gradiStr° $minutiStr\' $secondiStr" $direzione';
   }
 
+  // Conversione WGS84 -> UTM (WGS84 Ellissoide / Fuso standard Italia 32T)
+  String _convertiInUTM(double lat, double lon) {
+    const double a = 6378137.0; // raggio equatoriale
+    const double f = 1.0 / 298.257223563; // schiacciamento
+    const double k0 = 0.9996; // fattore di scala fuso UTM
+
+    double latRad = lat * pi / 180.0;
+    double lonRad = lon * pi / 180.0;
+
+    int zoneNumber = ((lon + 180) / 6).floor() + 1;
+    double lonOrigin = (zoneNumber - 1) * 6 - 180 + 3;
+    double lonOriginRad = lonOrigin * pi / 180.0;
+
+    double e2 = 2 * f - f * f;
+    double ePrime2 = e2 / (1 - e2);
+
+    double N = a / sqrt(1 - e2 * sin(latRad) * sin(latRad));
+    double T = tan(latRad) * tan(latRad);
+    double C = ePrime2 * cos(latRad) * cos(latRad);
+    double A = cos(latRad) * (lonRad - lonOriginRad);
+
+    double M = a * ((1 - e2 / 4 - 3 * e2 * e2 / 64 - 5 * e2 * e2 * e2 / 256) * latRad
+        - (3 * e2 / 8 + 3 * e2 * e2 / 32 + 45 * e2 * e2 * e2 / 1024) * sin(2 * latRad)
+        + (15 * e2 * e2 / 256 + 45 * e2 * e2 * e2 / 1024) * sin(4 * latRad)
+        - (35 * e2 * e2 * e2 / 3072) * sin(6 * latRad));
+
+    double easting = k0 * N * (A + (1 - T + C) * A * A * A / 6
+        + (5 - 18 * T + T * T + 72 * C - 58 * ePrime2) * A * A * A * A * A / 120) + 500000.0;
+
+    double northing = k0 * (M + N * tan(latRad) * (A * A / 2
+        + (5 - T + 9 * C + 4 * C * C) * A * A * A * A / 24
+        + (61 - 58 * T + T * T + 600 * C - 330 * ePrime2) * A * A * A * A * A * A / 720));
+
+    if (lat < 0) northing += 10000000.0;
+
+    String banda = 'T';
+    if (lat >= 56 && lat < 64) banda = 'U';
+    if (lat >= 48 && lat < 56) banda = 'U'; // semplificata per Europa/Italia
+
+    return '32$banda ${easting.toStringAsFixed(0)} E, ${northing.toStringAsFixed(0)} N';
+  }
+
   void _condividiPuntoIdrico(PuntoIdrico idrante) async {
     String latGMS = _convertiInWGS84GMS(idrante.latitudine, true);
     String lngGMS = _convertiInWGS84GMS(idrante.longitudine, false);
+    String utmStr = _convertiInUTM(idrante.latitudine, idrante.longitudine);
 
     List<String> attacchi = [];
     if (idrante.hasUni45) attacchi.add('UNI 45 (SI)'); else attacchi.add('UNI 45 (NO)');
@@ -554,13 +597,22 @@ class _HomePageState extends State<HomePage> {
 ⚙️ *Attacchi:* $attacchiStr$mezziStr$notaStr$modStr
 
 🌐 *WGS84:* $latGMS - $lngGMS
+📐 *UTM:* $utmStr
 🗺️ *Mappa:* https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.longitudine}
 ''';
 
-    final Uri whatsappUrl = Uri.parse('https://api.whatsapp.com/send?text=${Uri.encodeComponent(testo)}');
-    if (await canLaunchUrl(whatsappUrl)) {
-      await launchUrl(whatsappUrl, mode: LaunchMode.externalApplication);
-    } else {
+    // Apre direttamente WhatsApp con il testo precompilato
+    final Uri whatsappUrl = Uri.parse('https://wa.me/?text=${Uri.encodeComponent(testo)}');
+    
+    try {
+      if (await canLaunchUrl(whatsappUrl)) {
+        await launchUrl(whatsappUrl, mode: LaunchMode.externalApplication);
+      } else {
+        // Fallback su appunti se WhatsApp non è installato
+        await Clipboard.setData(ClipboardData(text: testo));
+        _mostraMessaggio('Copiato negli appunti!');
+      }
+    } catch (_) {
       await Clipboard.setData(ClipboardData(text: testo));
       _mostraMessaggio('Copiato negli appunti!');
     }
@@ -638,6 +690,7 @@ class _HomePageState extends State<HomePage> {
     _mapController.move(LatLng(idrante.latitudine, idrante.longitudine), 15.0);
     String latGMS = _convertiInWGS84GMS(idrante.latitudine, true);
     String lngGMS = _convertiInWGS84GMS(idrante.longitudine, false);
+    String utmStr = _convertiInUTM(idrante.latitudine, idrante.longitudine);
 
     showDialog(
       context: context,
@@ -665,6 +718,7 @@ class _HomePageState extends State<HomePage> {
               Text('Distanza: ${distanzaKm.toStringAsFixed(2)} km', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
               const Divider(),
               Text('WGS84: $latGMS - $lngGMS', style: const TextStyle(fontSize: 12)),
+              Text('UTM: $utmStr', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.blueGrey)),
               Text('Decimali: ${idrante.latitudine.toStringAsFixed(6)}, ${idrante.longitudine.toStringAsFixed(6)}', style: const TextStyle(fontSize: 11, color: Colors.grey)),
               const Divider(),
               Row(
@@ -694,7 +748,7 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
         actions: [
-          IconButton(icon: const Icon(Icons.share, color: Colors.green), onPressed: () => _condividiPuntoIdrico(idrante), tooltip: 'Condividi'),
+          IconButton(icon: const Icon(Icons.share, color: Colors.green), onPressed: () => _condividiPuntoIdrico(idrante), tooltip: 'Condividi su WhatsApp'),
           TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Chiudi')),
           ElevatedButton.icon(
             onPressed: () {
