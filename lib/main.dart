@@ -37,14 +37,9 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class AuthWrapper extends StatefulWidget {
+class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});
 
-  @override
-  State<AuthWrapper> createState() => _AuthWrapperState();
-}
-
-class _AuthWrapperState extends State<AuthWrapper> {
   @override
   Widget build(BuildContext context) {
     final session = Supabase.instance.client.auth.currentSession;
@@ -150,12 +145,12 @@ class _AuthPageState extends State<AuthPage> {
 
   Future<void> _recuperaPassword() async {
     if (_emailController.text.isEmpty) {
-      _mostraMessaggio('Inserisci la tua email nel campo sopra.', isError: true);
+      _mostraMessaggio('Inserisci la tua email.', isError: true);
       return;
     }
     try {
       await Supabase.instance.client.auth.resetPasswordForEmail(_emailController.text.trim());
-      _mostraMessaggio('Email per il ripristino inviata! Controlla la tua casella.');
+      _mostraMessaggio('Email per il ripristino inviata!');
     } catch (e) {
       _mostraMessaggio('Errore nell\'invio della mail.', isError: true);
     }
@@ -191,8 +186,8 @@ class _AuthPageState extends State<AuthPage> {
                   if (!isLogin) ...[
                     TextField(controller: _nomeController, decoration: const InputDecoration(labelText: 'Nome *')),
                     TextField(controller: _cognomeController, decoration: const InputDecoration(labelText: 'Cognome *')),
-                    TextField(controller: _distaccamentoController, decoration: const InputDecoration(labelText: 'Distaccamento (es. Fagnano Olona) *')),
-                    TextField(controller: _siglaController, decoration: const InputDecoration(labelText: 'Sigla Operativa (opzionale)')),
+                    TextField(controller: _distaccamentoController, decoration: const InputDecoration(labelText: 'Distaccamento *')),
+                    TextField(controller: _siglaController, decoration: const InputDecoration(labelText: 'Sigla Operativa')),
                     const SizedBox(height: 10),
                     DropdownButtonFormField<String>(
                       value: _ruoloSelezionato,
@@ -247,7 +242,6 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final String _passwordSicurezza = 'Ticino2026';
   String _filtroSelezionato = 'Tutti';
 
   double posizioneCorrenteLat = 45.6512;
@@ -279,7 +273,6 @@ class _HomePageState extends State<HomePage> {
   final _latController = TextEditingController();
   final _lngController = TextEditingController();
   final _noteController = TextEditingController();
-  final _passwordController = TextEditingController();
 
   @override
   void initState() {
@@ -375,7 +368,7 @@ class _HomePageState extends State<HomePage> {
 
       if (response.statusCode == 201 || response.statusCode == 200) {
         _caricaIdrantiDaSupabase();
-        _mostraMessaggio('Punto idrico salvato su Supabase!');
+        _mostraMessaggio('Punto idrico salvato!');
       }
     } catch (e) {
       _mostraMessaggio('Errore di salvataggio.', isError: true);
@@ -407,6 +400,21 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  Future<void> _cambiaStatoIdrante(PuntoIdrico idrante, String nuovoStato) async {
+    setState(() => idrante.stato = nuovoStato);
+    try {
+      await http.patch(
+        Uri.parse('$supabaseUrl/rest/v1/idranti?id=eq.${idrante.id}'),
+        headers: _headers,
+        body: json.encode({
+          'stato': nuovoStato,
+          'modificato_da': '${mioProfilo?['nome_cognome']} (${mioProfilo?['ruolo']})',
+        }),
+      );
+      _mostraMessaggio('Stato aggiornato a "$nuovoStato"');
+    } catch (_) {}
+  }
+
   Future<void> _eliminaIdranteDaSupabase(PuntoIdrico idrante) async {
     try {
       await http.delete(
@@ -428,6 +436,73 @@ class _HomePageState extends State<HomePage> {
         backgroundColor: isError ? Colors.red[800] : Colors.green[800],
       ),
     );
+  }
+
+  String _convertiInWGS84GMS(double coordinate, bool isLat) {
+    int gradi = coordinate.abs().floor();
+    double minutiDecimali = (coordinate.abs() - gradi) * 60;
+    int minuti = minutiDecimali.floor();
+    double secondi = (minutiDecimali - minuti) * 60;
+
+    String direzione = isLat ? (coordinate >= 0 ? 'N' : 'S') : (coordinate >= 0 ? 'E' : 'W');
+    String gradiStr = gradi.toString().padLeft(isLat ? 2 : 3, '0');
+    String minutiStr = minuti.toString().padLeft(2, '0');
+    String secondiStr = secondi.toStringAsFixed(1).padLeft(4, '0');
+
+    return '$gradiStr° $minutiStr\' $secondiStr" $direzione';
+  }
+
+  void _condividiPuntoIdrico(PuntoIdrico idrante) async {
+    String latGMS = _convertiInWGS84GMS(idrante.latitudine, true);
+    String lngGMS = _convertiInWGS84GMS(idrante.longitudine, false);
+
+    List<String> attacchi = [];
+    if (idrante.hasUni45) attacchi.add('UNI 45 (SI)'); else attacchi.add('UNI 45 (NO)');
+    if (idrante.hasUni70) attacchi.add('UNI 70 (SI)'); else attacchi.add('UNI 70 (NO)');
+    String attacchiStr = attacchi.join(', ');
+
+    String testo = '''
+🚨 *PUNTO IDRICO AIB*
+📌 *Codice:* ${idrante.codice} (${idrante.tipo})
+📍 *Ubicazione:* ${idrante.ubicazione}
+🔑 *Accesso:* ${idrante.isH24 ? "H24" : "Privato"}
+🟢 *Stato:* ${idrante.stato}
+⚙️ *Attacchi:* $attacchiStr
+
+🌐 *WGS84:* $latGMS - $lngGMS
+🗺️ *Mappa:* https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.longitudine}
+''';
+
+    final Uri whatsappUrl = Uri.parse('https://api.whatsapp.com/send?text=${Uri.encodeComponent(testo)}');
+    if (await canLaunchUrl(whatsappUrl)) {
+      await launchUrl(whatsappUrl, mode: LaunchMode.externalApplication);
+    } else {
+      await Clipboard.setData(ClipboardData(text: testo));
+      _mostraMessaggio('Copiato negli appunti!');
+    }
+  }
+
+  double _calcolaDistanzaKm(double lat1, double lon1, double lat2, double lon2) {
+    const double p = 0.017453292519943295;
+    final double a = 0.5 - cos((lat2 - lat1) * p) / 2 + cos(lat1 * p) * cos(lat2 * p) * (1 - cos((lon2 - lon1) * p)) / 2;
+    return 12742 * asin(sqrt(a));
+  }
+
+  List<PuntoIdrico> get _idrantiFiltratiEVicini {
+    List<PuntoIdrico> listaFiltrata = listaIdranti.where((item) {
+      if (_filtroSelezionato == 'Idranti') return item.tipo.contains('Idrante');
+      if (_filtroSelezionato == 'Vasche') return item.tipo.contains('Vasca');
+      if (_filtroSelezionato == 'Prese d\'Acqua') return item.tipo.contains('Presa');
+      return true;
+    }).toList();
+
+    listaFiltrata.sort((a, b) {
+      double distA = _calcolaDistanzaKm(posizioneCorrenteLat, posizioneCorrenteLng, a.latitudine, a.longitudine);
+      double distB = _calcolaDistanzaKm(posizioneCorrenteLat, posizioneCorrenteLng, b.latitudine, b.longitudine);
+      return distA.compareTo(distB);
+    });
+
+    return listaFiltrata;
   }
 
   Widget _buildBadgeCasco(String ruolo) {
@@ -469,6 +544,34 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  Widget _buildBadgeAttacco(String nome, bool disponibile) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: disponibile ? Colors.green[100] : Colors.red[100],
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: disponibile ? Colors.green[800]! : Colors.red[800]!, width: 1),
+      ),
+      child: Text(
+        nome,
+        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: disponibile ? Colors.green[900] : Colors.red[900]),
+      ),
+    );
+  }
+
+  Widget _buildFilterChip(String etichetta) {
+    bool isSelected = _filtroSelezionato == etichetta;
+    return Padding(
+      padding: const EdgeInsets.only(right: 6.0),
+      child: FilterChip(
+        label: Text(etichetta, style: TextStyle(color: isSelected ? Colors.white : Colors.black87)),
+        selected: isSelected,
+        selectedColor: Colors.blue[800],
+        onSelected: (_) => setState(() => _filtroSelezionato = etichetta),
+      ),
+    );
+  }
+
   void _apriPannelloAdmin() async {
     final supabase = Supabase.instance.client;
     final utenti = await supabase.from('profili_utenti').select();
@@ -477,7 +580,7 @@ class _HomePageState extends State<HomePage> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Pannello Amministratore - Gestione Utenti'),
+          title: const Text('Pannello Gestione Utenti'),
           content: SizedBox(
             width: double.maxFinite,
             child: ListView.builder(
@@ -487,7 +590,7 @@ class _HomePageState extends State<HomePage> {
                 final u = utenti[index];
                 return ListTile(
                   title: Text('${u['nome_cognome']} (${u['distaccamento']})'),
-                  subtitle: Text('Ruolo: ${u['ruolo']} - ${u['approvato'] ? "Approvato" : "IN ATTESA"}'),
+                  subtitle: Text('Ruolo: ${u['ruolo']} - ${u['approvato'] ? "APPROVATO" : "IN ATTESA"}'),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -535,6 +638,8 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final idrantiMostrati = _idrantiFiltratiEVicini;
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.blue[800],
@@ -579,6 +684,7 @@ class _HomePageState extends State<HomePage> {
       ),
       body: SingleChildScrollView(
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (_caricamentoCloud) const LinearProgressIndicator(color: Colors.orange),
             SizedBox(
@@ -594,7 +700,7 @@ class _HomePageState extends State<HomePage> {
                         point: LatLng(posizioneCorrenteLat, posizioneCorrenteLng),
                         child: const Icon(Icons.navigation, color: Colors.blueAccent, size: 30),
                       ),
-                      ...listaIdranti.map((idrante) {
+                      ...idrantiMostrati.map((idrante) {
                         return Marker(
                           point: LatLng(idrante.latitudine, idrante.longitudine),
                           child: CircleAvatar(
@@ -609,50 +715,94 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.all(10.0),
+              padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Punti Censiti (${listaIdranti.length})', style: const TextStyle(fontWeight: FontWeight.bold)),
+                  Text('Punti Censiti (${listaIdranti.length})', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                   ElevatedButton.icon(
                     onPressed: _mostraDialogoNuovoIdrante,
                     icon: const Icon(Icons.add, size: 16),
                     label: const Text('+ Idrante'),
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.blue[700], foregroundColor: Colors.white),
                   ),
                 ],
               ),
             ),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 12.0),
+              child: Row(children: [_buildFilterChip('Tutti'), _buildFilterChip('Idranti'), _buildFilterChip('Vasche'), _buildFilterChip('Prese d\'Acqua')]),
+            ),
+            const SizedBox(height: 6),
             ListView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              itemCount: listaIdranti.length,
+              itemCount: idrantiMostrati.length,
               itemBuilder: (ctx, index) {
-                final idrante = listaIdranti[index];
+                final idrante = idrantiMostrati[index];
+                double dist = _calcolaDistanzaKm(posizioneCorrenteLat, posizioneCorrenteLng, idrante.latitudine, idrante.longitudine);
                 return Card(
                   margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  child: ListTile(
-                    title: Text('${idrante.codice} - ${idrante.tipo}'),
-                    subtitle: Column(
+                  child: Padding(
+                    padding: const EdgeInsets.all(10.0),
+                    child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(idrante.ubicazione),
-                        if (idrante.creatoDa.isNotEmpty)
-                          Text('Censito da: ${idrante.creatoDa}', style: const TextStyle(fontSize: 10, color: Colors.grey)),
-                      ],
-                    ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (possoModificareEEliminare)
-                          IconButton(
-                            icon: const Icon(Icons.edit, color: Colors.orange),
-                            onPressed: () => _mostraDialogoModificaIdrante(idrante),
+                        CircleAvatar(
+                          backgroundColor: idrante.stato == 'Non Funzionante' ? Colors.red : Colors.green,
+                          child: const Icon(Icons.local_fire_department, color: Colors.white),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('${idrante.codice} - ${idrante.tipo}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                              Text('${idrante.ubicazione} (${idrante.isH24 ? "H24" : "Privato"})', style: const TextStyle(fontSize: 12)),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  _buildBadgeAttacco('UNI 45', idrante.hasUni45),
+                                  const SizedBox(width: 6),
+                                  _buildBadgeAttacco('UNI 70', idrante.hasUni70),
+                                  const SizedBox(width: 8),
+                                  Text('Dist: ${dist.toStringAsFixed(2)} km', style: const TextStyle(fontSize: 11)),
+                                ],
+                              ),
+                              if (idrante.creatoDa.isNotEmpty)
+                                Text('Censito da: ${idrante.creatoDa}', style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                              const SizedBox(height: 6),
+                              Row(
+                                children: [
+                                  if (possoModificareEEliminare)
+                                    InkWell(
+                                      onTap: () => _mostraDialogoModificaIdrante(idrante),
+                                      child: const Padding(padding: EdgeInsets.only(right: 12.0), child: Icon(Icons.edit, size: 20, color: Colors.orange)),
+                                    ),
+                                  if (possoModificareEEliminare)
+                                    InkWell(
+                                      onTap: () => _eliminaIdranteDaSupabase(idrante),
+                                      child: const Padding(padding: EdgeInsets.only(right: 12.0), child: Icon(Icons.delete, size: 20, color: Colors.red)),
+                                    ),
+                                  PopupMenuButton<String>(
+                                    padding: EdgeInsets.zero,
+                                    icon: const Icon(Icons.build_circle, size: 20, color: Colors.blueGrey),
+                                    onSelected: (st) => _cambiaStatoIdrante(idrante, st),
+                                    itemBuilder: (_) => [
+                                      const PopupMenuItem(value: 'Funzionante', child: Text('Funzionante')),
+                                      const PopupMenuItem(value: 'Non Funzionante', child: Text('Non Funzionante')),
+                                    ],
+                                  ),
+                                  InkWell(
+                                    onTap: () => _condividiPuntoIdrico(idrante),
+                                    child: const Padding(padding: EdgeInsets.symmetric(horizontal: 8.0), child: Icon(Icons.share, size: 20, color: Colors.green)),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
-                        if (possoModificareEEliminare)
-                          IconButton(
-                            icon: const Icon(Icons.delete, color: Colors.red),
-                            onPressed: () => _eliminaIdranteDaSupabase(idrante),
-                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -670,40 +820,59 @@ class _HomePageState extends State<HomePage> {
     _lngController.text = posizioneCorrenteLng.toStringAsFixed(4);
     _ubicazioneController.clear();
     _noteController.clear();
+    String tipoSelezionato = tipologieDisponibili.first;
+    bool hasUni45 = true;
+    bool hasUni70 = true;
+    bool isH24 = true;
     _codiceController.text = 'IDR-${listaIdranti.length + 1}';
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Nuovo Idrante'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: _codiceController, decoration: const InputDecoration(labelText: 'Codice')),
-            TextField(controller: _ubicazioneController, decoration: const InputDecoration(labelText: 'Ubicazione')),
-            TextField(controller: _noteController, decoration: const InputDecoration(labelText: 'Note')),
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Nuovo Idrante'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DropdownButtonFormField<String>(
+                  value: tipoSelezionato,
+                  items: tipologieDisponibili.map((t) => DropdownMenuItem(value: t, child: Text(t, style: const TextStyle(fontSize: 12)))).toList(),
+                  onChanged: (v) => setDialogState(() => tipoSelezionato = v!),
+                ),
+                TextField(controller: _codiceController, decoration: const InputDecoration(labelText: 'Codice')),
+                TextField(controller: _ubicazioneController, decoration: const InputDecoration(labelText: 'Ubicazione')),
+                CheckboxListTile(title: const Text('UNI 45'), value: hasUni45, onChanged: (v) => setDialogState(() => hasUni45 = v ?? false)),
+                CheckboxListTile(title: const Text('UNI 70'), value: hasUni70, onChanged: (v) => setDialogState(() => hasUni70 = v ?? false)),
+                SwitchListTile(title: const Text('Accesso H24'), value: isH24, onChanged: (v) => setDialogState(() => isH24 = v)),
+                TextField(controller: _noteController, decoration: const InputDecoration(labelText: 'Note')),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Annulla')),
+            ElevatedButton(
+              onPressed: () {
+                final nuovo = PuntoIdrico(
+                  id: '',
+                  codice: _codiceController.text,
+                  tipo: tipoSelezionato,
+                  ubicazione: _ubicazioneController.text,
+                  stato: 'Funzionante',
+                  latitudine: posizioneCorrenteLat,
+                  longitudine: posizioneCorrenteLng,
+                  hasUni45: hasUni45,
+                  hasUni70: hasUni70,
+                  isH24: isH24,
+                  note: _noteController.text,
+                );
+                Navigator.of(ctx).pop();
+                _salvaIdranteSuSupabase(nuovo);
+              },
+              child: const Text('Salva'),
+            ),
           ],
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Annulla')),
-          ElevatedButton(
-            onPressed: () {
-              final nuovo = PuntoIdrico(
-                id: '',
-                codice: _codiceController.text,
-                tipo: 'Idrante Soprasuolo',
-                ubicazione: _ubicazioneController.text,
-                stato: 'Funzionante',
-                latitudine: posizioneCorrenteLat,
-                longitudine: posizioneCorrenteLng,
-                note: _noteController.text,
-              );
-              Navigator.of(ctx).pop();
-              _salvaIdranteSuSupabase(nuovo);
-            },
-            child: const Text('Salva'),
-          ),
-        ],
       ),
     );
   }
@@ -712,38 +881,49 @@ class _HomePageState extends State<HomePage> {
     _codiceController.text = idrante.codice;
     _ubicazioneController.text = idrante.ubicazione;
     _noteController.text = idrante.note;
+    bool hasUni45 = idrante.hasUni45;
+    bool hasUni70 = idrante.hasUni70;
+    bool isH24 = idrante.isH24;
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('Modifica ${idrante.codice}'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: _ubicazioneController, decoration: const InputDecoration(labelText: 'Ubicazione')),
-            TextField(controller: _noteController, decoration: const InputDecoration(labelText: 'Note')),
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text('Modifica ${idrante.codice}'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(controller: _ubicazioneController, decoration: const InputDecoration(labelText: 'Ubicazione')),
+              CheckboxListTile(title: const Text('UNI 45'), value: hasUni45, onChanged: (v) => setDialogState(() => hasUni45 = v ?? false)),
+              CheckboxListTile(title: const Text('UNI 70'), value: hasUni70, onChanged: (v) => setDialogState(() => hasUni70 = v ?? false)),
+              SwitchListTile(title: const Text('Accesso H24'), value: isH24, onChanged: (v) => setDialogState(() => isH24 = v)),
+              TextField(controller: _noteController, decoration: const InputDecoration(labelText: 'Note')),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Annulla')),
+            ElevatedButton(
+              onPressed: () {
+                final agg = PuntoIdrico(
+                  id: idrante.id,
+                  codice: idrante.codice,
+                  tipo: idrante.tipo,
+                  ubicazione: _ubicazioneController.text,
+                  stato: idrante.stato,
+                  latitudine: idrante.latitudine,
+                  longitudine: idrante.longitudine,
+                  hasUni45: hasUni45,
+                  hasUni70: hasUni70,
+                  isH24: isH24,
+                  note: _noteController.text,
+                );
+                Navigator.of(ctx).pop();
+                _aggiornaIdranteSuSupabase(agg);
+              },
+              child: const Text('Salva'),
+            ),
           ],
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Annulla')),
-          ElevatedButton(
-            onPressed: () {
-              final agg = PuntoIdrico(
-                id: idrante.id,
-                codice: idrante.codice,
-                tipo: idrante.tipo,
-                ubicazione: _ubicazioneController.text,
-                stato: idrante.stato,
-                latitudine: idrante.latitudine,
-                longitudine: idrante.longitudine,
-                note: _noteController.text,
-              );
-              Navigator.of(ctx).pop();
-              _aggiornaIdranteSuSupabase(agg);
-            },
-            child: const Text('Aggiorna'),
-          ),
-        ],
       ),
     );
   }
@@ -757,6 +937,9 @@ class PuntoIdrico {
   String stato;
   final double latitudine;
   final double longitudine;
+  final bool hasUni45;
+  final bool hasUni70;
+  final bool isH24;
   final String note;
   final String creatoDa;
   final String modificatoDa;
@@ -769,6 +952,9 @@ class PuntoIdrico {
     required this.stato,
     required this.latitudine,
     required this.longitudine,
+    this.hasUni45 = true,
+    this.hasUni70 = true,
+    this.isH24 = true,
     this.note = '',
     this.creatoDa = '',
     this.modificatoDa = '',
@@ -782,6 +968,9 @@ class PuntoIdrico {
       'stato': stato,
       'latitudine': latitudine,
       'longitudine': longitudine,
+      'hasuni45': hasUni45,
+      'hasuni70': hasUni70,
+      'ish24': isH24,
       'note': note,
     };
   }
@@ -795,6 +984,9 @@ class PuntoIdrico {
       stato: map['stato']?.toString() ?? 'Funzionante',
       latitudine: double.tryParse(map['latitudine']?.toString() ?? '0') ?? 0.0,
       longitudine: double.tryParse(map['longitudine']?.toString() ?? '0') ?? 0.0,
+      hasUni45: map['hasuni45'] == true,
+      hasUni70: map['hasuni70'] == true,
+      isH24: map['ish24'] ?? true,
       note: map['note']?.toString() ?? '',
       creatoDa: map['creato_da']?.toString() ?? '',
       modificatoDa: map['modificato_da']?.toString() ?? '',
