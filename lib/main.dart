@@ -1,13 +1,10 @@
-import 'dart:async';
 import 'dart:convert';
 import 'dart:html' as html;
 import 'dart:math';
-import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 void main() {
@@ -50,11 +47,8 @@ class _HomePageState extends State<HomePage> {
   double posizioneCorrenteLat = 45.6512;
   double posizioneCorrenteLng = 8.7123;
   bool _caricamentoCloud = false;
-  bool _isOffline = false;
-  int _elementiInCodaOffline = 0;
 
   final MapController _mapController = MapController();
-  late StreamSubscription<ConnectivityResult> _connectivitySubscription;
 
   final List<String> mezziDisponibili = [
     'Pickup Modulo AIB',
@@ -82,12 +76,11 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _ottieniPosizioneGPS();
-    _inizializzaConnessioneECache();
+    _caricaIdrantiDaSupabase();
   }
 
   @override
   void dispose() {
-    _connectivitySubscription.cancel();
     _codiceController.dispose();
     _ubicazioneController.dispose();
     _latController.dispose();
@@ -95,22 +88,6 @@ class _HomePageState extends State<HomePage> {
     _noteController.dispose();
     _passwordController.dispose();
     super.dispose();
-  }
-
-  void _inizializzaConnessioneECache() async {
-    await _aggiornaConteggioCodaOffline();
-    _caricaIdrantiDaSupabase();
-
-    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((ConnectivityResult result) {
-      if (result != ConnectivityResult.none) {
-        if (_isOffline) {
-          setState(() => _isOffline = false);
-          _sincronizzaCodaOffline();
-        }
-      } else {
-        setState(() => _isOffline = true);
-      }
-    });
   }
 
   void _ottieniPosizioneGPS() {
@@ -134,140 +111,31 @@ class _HomePageState extends State<HomePage> {
         'Prefer': 'return=representation',
       };
 
-  Future<void> _salvaCacheLocale(List<PuntoIdrico> lista) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final String encodedData = json.encode(lista.map((e) => e.toMapWithId()).toList());
-      await prefs.setString('cache_idranti', encodedData);
-    } catch (_) {}
-  }
-
-  Future<List<PuntoIdrico>> _caricaCacheLocale() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final String? encodedData = prefs.getString('cache_idranti');
-      if (encodedData != null) {
-        final List<dynamic> decoded = json.decode(encodedData);
-        return decoded.map((item) => PuntoIdrico.fromMap(item)).toList();
-      }
-    } catch (_) {}
-    return [];
-  }
-
-  Future<void> _aggiornaConteggioCodaOffline() async {
-    final prefs = await SharedPreferences.getInstance();
-    List<String> coda = prefs.getStringList('coda_offline') ?? [];
-    setState(() {
-      _elementiInCodaOffline = coda.length;
-    });
-  }
-
-  Future<void> _aggiungiACodaOffline(String azione, Map<String, dynamic> dati) async {
-    final prefs = await SharedPreferences.getInstance();
-    List<String> coda = prefs.getStringList('coda_offline') ?? [];
-    coda.add(json.encode({'azione': azione, 'dati': dati}));
-    await prefs.setStringList('coda_offline', coda);
-    await _aggiornaConteggioCodaOffline();
-    _mostraMessaggio('Modifica salvata in locale (Offline). Verrà sincronizzata al ripristino della rete.');
-  }
-
-  Future<void> _sincronizzaCodaOffline() async {
-    final prefs = await SharedPreferences.getInstance();
-    List<String> coda = prefs.getStringList('coda_offline') ?? [];
-    if (coda.isEmpty) return;
-
-    setState(() => _caricamentoCloud = true);
-    _mostraMessaggio('Connessione ripristinata: Sincronizzazione dati in corso...');
-
-    List<String> nonInviati = [];
-    for (String itemStr in coda) {
-      try {
-        final item = json.decode(itemStr);
-        final String azione = item['azione'];
-        final Map<String, dynamic> dati = item['dati'];
-
-        if (azione == 'INSERT') {
-          await http.post(
-            Uri.parse('$_supabaseUrl/rest/v1/idranti'),
-            headers: _headers,
-            body: json.encode(dati),
-          );
-        } else if (azione == 'UPDATE') {
-          await http.patch(
-            Uri.parse('$_supabaseUrl/rest/v1/idranti?id=eq.${dati['id']}'),
-            headers: _headers,
-            body: json.encode(dati),
-          );
-        } else if (azione == 'UPDATE_STATO') {
-          await http.patch(
-            Uri.parse('$_supabaseUrl/rest/v1/idranti?id=eq.${dati['id']}'),
-            headers: _headers,
-            body: json.encode({'stato': dati['stato']}),
-          );
-        } else if (azione == 'DELETE') {
-          await http.delete(
-            Uri.parse('$_supabaseUrl/rest/v1/idranti?id=eq.${dati['id']}'),
-            headers: _headers,
-          );
-        }
-      } catch (_) {
-        nonInviati.add(itemStr);
-      }
-    }
-
-    await prefs.setStringList('coda_offline', nonInviati);
-    await _aggiornaConteggioCodaOffline();
-    setState(() => _caricamentoCloud = false);
-    _mostraMessaggio('Sincronizzazione completata!');
-    _caricaIdrantiDaSupabase();
-  }
-
   Future<void> _caricaIdrantiDaSupabase() async {
     setState(() => _caricamentoCloud = true);
     try {
       final response = await http.get(
         Uri.parse('$_supabaseUrl/rest/v1/idranti?select=*'),
         headers: _headers,
-      ).timeout(const Duration(seconds: 5));
+      );
 
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
         setState(() {
           listaIdranti = data.map((item) => PuntoIdrico.fromMap(item)).toList();
-          _isOffline = false;
         });
-        _salvaCacheLocale(listaIdranti);
         _mostraMessaggio('Dati aggiornati dal Cloud Supabase!');
       } else {
-        throw Exception();
+        _mostraMessaggio('Errore ${response.statusCode} durante il caricamento.', isError: true);
       }
-    } catch (_) {
-      setState(() => _isOffline = true);
-      List<PuntoIdrico> cache = await _caricaCacheLocale();
-      if (cache.isNotEmpty) {
-        setState(() {
-          listaIdranti = cache;
-        });
-        _mostraMessaggio('Modalità Offline: Caricati idranti dalla memoria locale.', isError: true);
-      } else {
-        _mostraMessaggio('Nessuna connessione e nessuna cache locale disponibile.', isError: true);
-      }
+    } catch (e) {
+      _mostraMessaggio('Errore di connessione a Supabase.', isError: true);
     } finally {
       setState(() => _caricamentoCloud = false);
     }
   }
 
   Future<void> _salvaIdranteSuSupabase(PuntoIdrico idrante) async {
-    if (_isOffline) {
-      idrante.id = 'temp_${DateTime.now().millisecondsSinceEpoch}';
-      setState(() {
-        listaIdranti.add(idrante);
-      });
-      _salvaCacheLocale(listaIdranti);
-      _aggiungiACodaOffline('INSERT', idrante.toMap());
-      return;
-    }
-
     setState(() => _caricamentoCloud = true);
     try {
       final response = await http.post(
@@ -286,38 +154,18 @@ class _HomePageState extends State<HomePage> {
         setState(() {
           listaIdranti.add(idrante);
         });
-        _salvaCacheLocale(listaIdranti);
         _mostraMessaggio('Punto idrico salvato in Supabase!');
       } else {
-        _mostraMessaggio('Errore ${response.statusCode}: Impossibile salvare.', isError: true);
+        _mostraMessaggio('Errore ${response.statusCode}: Verifica la tabella idranti.', isError: true);
       }
     } catch (e) {
-      idrante.id = 'temp_${DateTime.now().millisecondsSinceEpoch}';
-      setState(() {
-        listaIdranti.add(idrante);
-        _isOffline = true;
-      });
-      _salvaCacheLocale(listaIdranti);
-      _aggiungiACodaOffline('INSERT', idrante.toMap());
+      _mostraMessaggio('Impossibile salvare su Supabase: $e', isError: true);
     } finally {
       setState(() => _caricamentoCloud = false);
     }
   }
 
   Future<void> _aggiornaIdranteSuSupabase(PuntoIdrico idrante) async {
-    setState(() {
-      int index = listaIdranti.indexWhere((element) => element.id == idrante.id);
-      if (index != -1) {
-        listaIdranti[index] = idrante;
-      }
-    });
-    _salvaCacheLocale(listaIdranti);
-
-    if (_isOffline || idrante.id.startsWith('temp_')) {
-      _aggiungiACodaOffline('UPDATE', idrante.toMapWithId());
-      return;
-    }
-
     setState(() => _caricamentoCloud = true);
     try {
       final response = await http.patch(
@@ -327,12 +175,18 @@ class _HomePageState extends State<HomePage> {
       );
 
       if (response.statusCode == 200 || response.statusCode == 204) {
+        setState(() {
+          int index = listaIdranti.indexWhere((element) => element.id == idrante.id);
+          if (index != -1) {
+            listaIdranti[index] = idrante;
+          }
+        });
         _mostraMessaggio('Punto idrico aggiornato con successo!');
       } else {
         _mostraMessaggio('Errore ${response.statusCode} durante l\'aggiornamento.', isError: true);
       }
     } catch (e) {
-      _aggiungiACodaOffline('UPDATE', idrante.toMapWithId());
+      _mostraMessaggio('Errore aggiornamento Supabase: $e', isError: true);
     } finally {
       setState(() => _caricamentoCloud = false);
     }
@@ -342,12 +196,6 @@ class _HomePageState extends State<HomePage> {
     setState(() {
       idrante.stato = nuovoStato;
     });
-    _salvaCacheLocale(listaIdranti);
-
-    if (_isOffline || idrante.id.startsWith('temp_')) {
-      _aggiungiACodaOffline('UPDATE_STATO', {'id': idrante.id, 'stato': nuovoStato});
-      return;
-    }
 
     try {
       final response = await http.patch(
@@ -362,29 +210,22 @@ class _HomePageState extends State<HomePage> {
         _mostraMessaggio('Errore ${response.statusCode} salvataggio stato.', isError: true);
       }
     } catch (e) {
-      _aggiungiACodaOffline('UPDATE_STATO', {'id': idrante.id, 'stato': nuovoStato});
+      _mostraMessaggio('Errore di connessione a Supabase.', isError: true);
     }
   }
 
   Future<void> _eliminaIdranteDaSupabase(PuntoIdrico idrante) async {
-    setState(() {
-      listaIdranti.removeWhere((item) => item.id == idrante.id);
-    });
-    _salvaCacheLocale(listaIdranti);
-
-    if (_isOffline || idrante.id.startsWith('temp_')) {
-      _aggiungiACodaOffline('DELETE', {'id': idrante.id});
-      return;
-    }
-
     try {
       await http.delete(
         Uri.parse('$_supabaseUrl/rest/v1/idranti?id=eq.${idrante.id}'),
         headers: _headers,
       );
+      setState(() {
+        listaIdranti.removeWhere((item) => item.id == idrante.id);
+      });
       _mostraMessaggio('Punto idrico eliminato da Supabase.');
     } catch (e) {
-      _aggiungiACodaOffline('DELETE', {'id': idrante.id});
+      _mostraMessaggio('Errore eliminazione Supabase.', isError: true);
     }
   }
 
@@ -1094,11 +935,7 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
         ),
         actions: [
           IconButton(icon: const Icon(Icons.my_location), onPressed: _ottieniPosizioneGPS, tooltip: 'Aggiorna Posizione GPS'),
-          IconButton(
-            icon: Icon(_isOffline ? Icons.cloud_off : Icons.refresh),
-            onPressed: _caricaIdrantiDaSupabase,
-            tooltip: _isOffline ? 'Modalità Offline Active' : 'Ricarica da Supabase',
-          ),
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _caricaIdrantiDaSupabase, tooltip: 'Ricarica da Supabase'),
         ],
       ),
       body: SingleChildScrollView(
@@ -1108,17 +945,12 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
             if (_caricamentoCloud) const LinearProgressIndicator(color: Colors.orange),
             Container(
               height: 36,
-              color: _isOffline ? Colors.orange[900] : Colors.blue[900],
+              color: Colors.blue[900],
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    _isOffline
-                        ? 'OFFLINE - Memoria Locale (${_elementiInCodaOffline} in coda)'
-                        : 'Parco Ticino - Supabase Cloud',
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
-                  ),
+                  const Text('Parco Ticino - Supabase Cloud', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
                   Text('GPS: ${posizioneCorrenteLat.toStringAsFixed(4)}, ${posizioneCorrenteLng.toStringAsFixed(4)}',
                       style: const TextStyle(color: Colors.white70, fontSize: 11)),
                 ],
@@ -1354,12 +1186,6 @@ class PuntoIdrico {
       'ish24': isH24,
       'note': note,
     };
-  }
-
-  Map<String, dynamic> toMapWithId() {
-    Map<String, dynamic> map = toMap();
-    map['id'] = id;
-    return map;
   }
 
   factory PuntoIdrico.fromMap(Map<String, dynamic> map) {
