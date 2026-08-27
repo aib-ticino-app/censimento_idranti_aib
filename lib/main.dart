@@ -533,11 +533,10 @@ class _HomePageState extends State<HomePage> {
     return '$gradiStr° $minutiStr\' $secondiStr" $direzione';
   }
 
-  // Conversione WGS84 -> UTM (WGS84 Ellissoide / Fuso standard Italia 32T)
   String _convertiInUTM(double lat, double lon) {
-    const double a = 6378137.0; // raggio equatoriale
-    const double f = 1.0 / 298.257223563; // schiacciamento
-    const double k0 = 0.9996; // fattore di scala fuso UTM
+    const double a = 6378137.0;
+    const double f = 1.0 / 298.257223563;
+    const double k0 = 0.9996;
 
     double latRad = lat * pi / 180.0;
     double lonRad = lon * pi / 180.0;
@@ -570,7 +569,7 @@ class _HomePageState extends State<HomePage> {
 
     String banda = 'T';
     if (lat >= 56 && lat < 64) banda = 'U';
-    if (lat >= 48 && lat < 56) banda = 'U'; // semplificata per Europa/Italia
+    if (lat >= 48 && lat < 56) banda = 'U';
 
     return '32$banda ${easting.toStringAsFixed(0)} E, ${northing.toStringAsFixed(0)} N';
   }
@@ -580,35 +579,35 @@ class _HomePageState extends State<HomePage> {
     String lngGMS = _convertiInWGS84GMS(idrante.longitudine, false);
     String utmStr = _convertiInUTM(idrante.latitudine, idrante.longitudine);
 
+    // Filtra solo gli attacchi realmente presenti per evitare confusione
     List<String> attacchi = [];
-    if (idrante.hasUni45) attacchi.add('UNI 45 (SI)'); else attacchi.add('UNI 45 (NO)');
-    if (idrante.hasUni70) attacchi.add('UNI 70 (SI)'); else attacchi.add('UNI 70 (NO)');
-    String attacchiStr = attacchi.join(', ');
-    String notaStr = idrante.note.isNotEmpty ? '\n📝 *Note:* ${idrante.note}' : '';
-    String mezziStr = idrante.mezziCompatibili.isNotEmpty ? '\n🚒 *Mezzi:* ${idrante.mezziCompatibili.join(', ')}' : '';
-    String modStr = idrante.modificatoDa.isNotEmpty ? '\n👤 *Ultima modifica:* ${idrante.modificatoDa}' : '';
+    if (idrante.hasUni45) attacchi.add('UNI 45');
+    if (idrante.hasUni70) attacchi.add('UNI 70');
+    String attacchiStr = attacchi.isNotEmpty ? attacchi.join(', ') : 'Nessuno';
+
+    String notaStr = idrante.note.isNotEmpty ? '\n📝 Note: ${idrante.note}' : '';
+    String mezziStr = idrante.mezziCompatibili.isNotEmpty ? '\n🚒 Mezzi: ${idrante.mezziCompatibili.join(', ')}' : '';
+    String modStr = idrante.modificatoDa.isNotEmpty ? '\n👤 Ultima modifica: ${idrante.modificatoDa}' : '';
 
     String testo = '''
-🚨 *PUNTO IDRICO AIB*
-📌 *Codice:* ${idrante.codice} (${idrante.tipo})
-📍 *Ubicazione:* ${idrante.ubicazione}
-🔑 *Accesso:* ${idrante.isH24 ? "H24" : "Privato"}
-🟢 *Stato:* ${idrante.stato}
-⚙️ *Attacchi:* $attacchiStr$mezziStr$notaStr$modStr
+🚨 PUNTO IDRICO AIB
+📌 Codice: ${idrante.codice} (${idrante.tipo})
+📍 Ubicazione: ${idrante.ubicazione}
+🔑 Accesso: ${idrante.isH24 ? "H24" : "Privato"}
+🟢 Stato: ${idrante.stato}
+⚙️ Attacchi: $attacchiStr$mezziStr$notaStr$modStr
 
-🌐 *WGS84:* $latGMS - $lngGMS
-📐 *UTM:* $utmStr
-🗺️ *Mappa:* https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.longitudine}
+🌐 WGS84: $latGMS - $lngGMS
+📐 UTM: $utmStr
+🗺️ Mappa: https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.longitudine}
 ''';
 
-    // Apre direttamente WhatsApp con il testo precompilato
     final Uri whatsappUrl = Uri.parse('https://wa.me/?text=${Uri.encodeComponent(testo)}');
     
     try {
       if (await canLaunchUrl(whatsappUrl)) {
         await launchUrl(whatsappUrl, mode: LaunchMode.externalApplication);
       } else {
-        // Fallback su appunti se WhatsApp non è installato
         await Clipboard.setData(ClipboardData(text: testo));
         _mostraMessaggio('Copiato negli appunti!');
       }
@@ -737,7 +736,7 @@ class _HomePageState extends State<HomePage> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(color: Colors.amber[50], borderRadius: BorderRadius.circular(6)),
-                  child: Text('📝 Note: ${idrante.note}', style: const TextStyle(fontSize: 12)),
+                  child: Text('Note: ${idrante.note}', style: const TextStyle(fontSize: 12)),
                 ),
               ],
               if (idrante.modificatoDa.isNotEmpty) ...[

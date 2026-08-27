@@ -47225,19 +47225,17 @@ d=a1.r
 c=o.zB(d,!1)
 b=o.St(f,d)
 a=A.b([],t.s)
-if(a1.x)a.push("UNI 45 (SI)")
-else a.push("UNI 45 (NO)")
-if(a1.y)a.push("UNI 70 (SI)")
-else a.push("UNI 70 (NO)")
-l=B.b.be(a,", ")
+if(a1.x)a.push("UNI 45")
+if(a1.y)a.push("UNI 70")
+l=a.length!==0?B.b.be(a,", "):"Nessuno"
 k=a1.Q
-j=k.length!==0?"\n\ud83d\udcdd *Note:* "+k:""
+j=k.length!==0?"\n\ud83d\udcdd Note: "+k:""
 k=a1.w
-i=k.length!==0?"\n\ud83d\ude92 *Mezzi:* "+B.b.be(k,", "):""
+i=k.length!==0?"\n\ud83d\ude92 Mezzi: "+B.b.be(k,", "):""
 k=a1.at
-h=k.length!==0?"\n\ud83d\udc64 *Ultima modifica:* "+k:""
+h=k.length!==0?"\n\ud83d\udc64 Ultima modifica: "+k:""
 k=a1.z?"H24":"Privato"
-n="\ud83d\udea8 *PUNTO IDRICO AIB*\n\ud83d\udccc *Codice:* "+a1.b+" ("+a1.c+")\n\ud83d\udccd *Ubicazione:* "+a1.d+"\n\ud83d\udd11 *Accesso:* "+k+"\n\ud83d\udfe2 *Stato:* "+a1.e+"\n\u2699\ufe0f *Attacchi:* "+l+i+j+h+"\n\n\ud83c\udf10 *WGS84:* "+e+" - "+c+"\n\ud83d\udcd0 *UTM:* "+b+"\n\ud83d\uddfa\ufe0f *Mappa:* https://www.google.com/maps/search/?api=1&query="+A.j(f)+","+A.j(d)+"\n"
+n="\ud83d\udea8 PUNTO IDRICO AIB\n\ud83d\udccc Codice: "+a1.b+" ("+a1.c+")\n\ud83d\udccd Ubicazione: "+a1.d+"\n\ud83d\udd11 Accesso: "+k+"\n\ud83d\udfe2 Stato: "+a1.e+"\n\u2699\ufe0f Attacchi: "+l+i+j+h+"\n\n\ud83c\udf10 WGS84: "+e+" - "+c+"\n\ud83d\udcd0 UTM: "+b+"\n\ud83d\uddfa\ufe0f Mappa: https://www.google.com/maps/search/?api=1&query="+A.j(f)+","+A.j(d)+"\n"
 m=A.cE("https://wa.me/?text="+A.tR(2,n,B.T,!1),0,null)
 q=3
 s=9
@@ -47511,7 +47509,7 @@ l=p.w
 if(l.length!==0)B.b.N(m,A.b([B.cx,A.bx("Mezzi: "+B.b.be(l,", "),r,r,r,B.Yh,r,r)],o))
 l=p.Q
 if(l.length!==0){k=A.pH(6)
-B.b.N(m,A.b([B.cx,A.j6(r,A.bx("\ud83d\udcdd Note: "+l,r,r,r,B.dv,r,r),B.C,r,r,new A.dK(B.FU,r,r,k,r,r,B.bb),r,r,r,B.fe,r,r,r)],o))}l=p.at
+B.b.N(m,A.b([B.cx,A.j6(r,A.bx("Note: "+l,r,r,r,B.dv,r,r),B.C,r,r,new A.dK(B.FU,r,r,k,r,r,B.bb),r,r,r,B.fe,r,r,r)],o))}l=p.at
 if(l.length!==0)B.b.N(m,A.b([B.cx,A.bx("Ultima modifica: "+l,r,r,r,B.C_,r,r)],o))
 m=A.wK(A.k0(m,B.bc,B.a1,B.b3),r,B.ac)
 l=A.nI(r,r,r,B.JP,r,r,new A.aw1(q,p),r,r,r,"Condividi su WhatsApp")
