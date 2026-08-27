@@ -69,6 +69,7 @@ class _HomePageState extends State<HomePage> {
   final _ubicazioneController = TextEditingController();
   final _latController = TextEditingController();
   final _lngController = TextEditingController();
+  final _noteController = TextEditingController();
   final _passwordController = TextEditingController();
 
   @override
@@ -84,6 +85,7 @@ class _HomePageState extends State<HomePage> {
     _ubicazioneController.dispose();
     _latController.dispose();
     _lngController.dispose();
+    _noteController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -257,9 +259,9 @@ class _HomePageState extends State<HomePage> {
     String lngGMS = _convertiInWGS84GMS(idrante.longitudine, false);
 
     List<String> attacchi = [];
-    if (idrante.hasUni45) attacchi.add('UNI 45');
-    if (idrante.hasUni70) attacchi.add('UNI 70');
-    String attacchiStr = attacchi.isNotEmpty ? attacchi.join(', ') : 'Nessuno';
+    if (idrante.hasUni45) attacchi.add('UNI 45 (SI)'); else attacchi.add('UNI 45 (NO)');
+    if (idrante.hasUni70) attacchi.add('UNI 70 (SI)'); else attacchi.add('UNI 70 (NO)');
+    String attacchiStr = attacchi.join(', ');
     String accessoStr = idrante.isH24 ? 'Accessibile H24' : 'Proprietà Privata';
 
     String pallinoStato = '🟢';
@@ -269,13 +271,15 @@ class _HomePageState extends State<HomePage> {
       pallinoStato = '🟡';
     }
 
+    String notaStr = idrante.note.isNotEmpty ? '\n📝 *Note:* ${idrante.note}' : '';
+
     String testoCondivisione = '''
 🚨 *PUNTO IDRICO AIB*
 📌 *Codice:* ${idrante.codice} (${idrante.tipo})
 📍 *Ubicazione:* ${idrante.ubicazione}
 🔑 *Accesso:* $accessoStr
 $pallinoStato *Stato:* ${idrante.stato}
-⚙️ *Attacchi:* $attacchiStr
+⚙️ *Attacchi:* $attacchiStr$notaStr
 
 🌐 *WGS84 (GMS):*
 $latGMS - $lngGMS
@@ -353,6 +357,40 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
     if (idrante.tipo.contains('Vasca')) return IconaVascaAIB(size: size);
     if (idrante.tipo.contains('Presa')) return Icon(Icons.waves, size: size, color: overrideColor ?? Colors.blue[800]);
     return Icon(Icons.fire_hydrant_alt, size: size, color: overrideColor ?? Colors.blue[800]);
+  }
+
+  Widget _buildBadgeAttacco(String nome, bool disponibile) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: disponibile ? Colors.green[100] : Colors.red[100],
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(
+          color: disponibile ? Colors.green[800]! : Colors.red[800]!,
+          width: 1.2,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            disponibile ? Icons.check_circle : Icons.cancel,
+            size: 13,
+            color: disponibile ? Colors.green[800] : Colors.red[800],
+          ),
+          const SizedBox(width: 3),
+          Text(
+            nome,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              color: disponibile ? Colors.green[900] : Colors.red[900],
+              decoration: disponibile ? null : TextDecoration.lineThrough,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _avviaNavigatoreReale(double lat, double lng) async {
@@ -479,6 +517,7 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
     _ubicazioneController.text = idrante.ubicazione;
     _latController.text = idrante.latitudine.toString();
     _lngController.text = idrante.longitudine.toString();
+    _noteController.text = idrante.note;
 
     String tipoSelezionato = idrante.tipo;
     String statoSelezionato = idrante.stato;
@@ -545,6 +584,17 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
                 CheckboxListTile(title: const Text('UNI 45'), value: hasUni45, onChanged: (v) => setDialogState(() => hasUni45 = v ?? false)),
                 CheckboxListTile(title: const Text('UNI 70'), value: hasUni70, onChanged: (v) => setDialogState(() => hasUni70 = v ?? false)),
                 const SizedBox(height: 8),
+                TextField(
+                  controller: _noteController,
+                  maxLength: 200,
+                  maxLines: 2,
+                  decoration: const InputDecoration(
+                    labelText: 'Note aggiuntive (max 200 caratteri)',
+                    border: OutlineInputBorder(),
+                    hintText: 'Es. Presso cancello verde, pressione bassa...',
+                  ),
+                ),
+                const SizedBox(height: 8),
                 const Text('Mezzi Compatibili:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                 ...mezziDisponibili.map((mezzo) {
                   return CheckboxListTile(
@@ -586,6 +636,7 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
                   hasUni45: hasUni45,
                   hasUni70: hasUni70,
                   isH24: isH24,
+                  note: _noteController.text,
                 );
 
                 Navigator.of(ctx).pop();
@@ -601,7 +652,6 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
   }
 
   void _mostraDettaglioIdrante(PuntoIdrico idrante, double distanzaKm) {
-    // Sposta anche la mappa sul punto selezionato
     _mapController.move(LatLng(idrante.latitudine, idrante.longitudine), 15.0);
 
     String latGMS = _convertiInWGS84GMS(idrante.latitudine, true);
@@ -663,11 +713,31 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
             const Divider(height: 16),
             Row(
               children: [
-                Chip(label: Text('UNI 45', style: TextStyle(color: idrante.hasUni45 ? Colors.green : Colors.grey))),
+                _buildBadgeAttacco('UNI 45', idrante.hasUni45),
                 const SizedBox(width: 8),
-                Chip(label: Text('UNI 70', style: TextStyle(color: idrante.hasUni70 ? Colors.green : Colors.grey))),
+                _buildBadgeAttacco('UNI 70', idrante.hasUni70),
               ],
             ),
+            if (idrante.note.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.amber[50],
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: Colors.amber[400]!),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('📝 Note:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.brown)),
+                    const SizedBox(height: 2),
+                    Text(idrante.note, style: const TextStyle(fontSize: 12, color: Colors.black87)),
+                  ],
+                ),
+              ),
+            ],
             if (idrante.mezziCompatibili.isNotEmpty) ...[
               const SizedBox(height: 8),
               Text('Mezzi: ${idrante.mezziCompatibili.join(', ')}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
@@ -698,6 +768,7 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
     _latController.text = posizioneCorrenteLat.toStringAsFixed(4);
     _lngController.text = posizioneCorrenteLng.toStringAsFixed(4);
     _ubicazioneController.clear();
+    _noteController.clear();
     String tipoSelezionato = tipologieDisponibili.first;
     String statoSelezionato = 'Funzionante';
     bool hasUni45 = true;
@@ -763,6 +834,17 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
                 CheckboxListTile(title: const Text('UNI 45'), value: hasUni45, onChanged: (v) => setDialogState(() => hasUni45 = v ?? false)),
                 CheckboxListTile(title: const Text('UNI 70'), value: hasUni70, onChanged: (v) => setDialogState(() => hasUni70 = v ?? false)),
                 const SizedBox(height: 8),
+                TextField(
+                  controller: _noteController,
+                  maxLength: 200,
+                  maxLines: 2,
+                  decoration: const InputDecoration(
+                    labelText: 'Note aggiuntive (max 200 caratteri)',
+                    border: OutlineInputBorder(),
+                    hintText: 'Es. Presso cancello verde, pressione bassa...',
+                  ),
+                ),
+                const SizedBox(height: 8),
                 const Text('Mezzi Compatibili:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                 ...mezziDisponibili.map((mezzo) {
                   return CheckboxListTile(
@@ -804,6 +886,7 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
                   hasUni45: hasUni45,
                   hasUni70: hasUni70,
                   isH24: isH24,
+                  note: _noteController.text,
                 );
 
                 Navigator.of(ctx).pop();
@@ -963,19 +1046,22 @@ https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.
                                 const SizedBox(height: 4),
                                 Row(
                                   children: [
-                                    const Text('Stato: ', style: TextStyle(fontSize: 11)),
-                                    Text(
-                                      idrante.stato,
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold,
-                                        color: _getColoreStato(idrante.stato),
-                                      ),
-                                    ),
-                                    const Text(' • ', style: TextStyle(fontSize: 11)),
+                                    _buildBadgeAttacco('UNI 45', idrante.hasUni45),
+                                    const SizedBox(width: 6),
+                                    _buildBadgeAttacco('UNI 70', idrante.hasUni70),
+                                    const SizedBox(width: 8),
                                     Text('Dist: ${dist.toStringAsFixed(2)} km', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500)),
                                   ],
                                 ),
+                                if (idrante.note.isNotEmpty) ...[
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '📝 ${idrante.note}',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: Colors.amber[900]),
+                                  ),
+                                ],
                                 const SizedBox(height: 6),
                                 Row(
                                   children: [
@@ -1062,6 +1148,7 @@ class PuntoIdrico {
   final bool hasUni45;
   final bool hasUni70;
   final bool isH24;
+  final String note;
 
   PuntoIdrico({
     required this.id,
@@ -1075,6 +1162,7 @@ class PuntoIdrico {
     this.hasUni45 = false,
     this.hasUni70 = false,
     this.isH24 = true,
+    this.note = '',
   });
 
   Map<String, dynamic> toMap() {
@@ -1089,6 +1177,7 @@ class PuntoIdrico {
       'hasuni45': hasUni45,
       'hasuni70': hasUni70,
       'ish24': isH24,
+      'note': note,
     };
   }
 
@@ -1108,6 +1197,7 @@ class PuntoIdrico {
       hasUni45: map['hasuni45'] == true,
       hasUni70: map['hasuni70'] == true,
       isH24: map['ish24'] ?? true,
+      note: map['note']?.toString() ?? '',
     );
   }
 }
