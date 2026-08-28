@@ -1149,7 +1149,7 @@ class _HomePageState extends State<HomePage> {
                 ],
               ),
             ),
-            // MAPPA STANDARD CON BUSSOLA BASATA SU SENSORS_PLUS
+            // MAPPA STANDARD CON BUSSOLA SPENTA DI DEFAULT
             SizedBox(
               height: 250,
               child: Stack(
@@ -1488,7 +1488,7 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-// WIDGET BUSSOLA BASATO SU SENSORS_PLUS
+// WIDGET BUSSOLA SPENTA DI DEFAULT
 class WidgetBussolaSensori extends StatefulWidget {
   final MapController mapController;
   const WidgetBussolaSensori({super.key, required this.mapController});
@@ -1498,7 +1498,8 @@ class WidgetBussolaSensori extends StatefulWidget {
 }
 
 class _WidgetBussolaSensoriState extends State<WidgetBussolaSensori> {
-  bool _bussolaAttiva = true;
+  // Impostata a false per default come richiesto
+  bool _bussolaAttiva = false;
   double _heading = 0.0;
 
   String _getDirezioneCardinale(double gradi) {
@@ -1529,6 +1530,7 @@ class _WidgetBussolaSensoriState extends State<WidgetBussolaSensori> {
         double normalizedHeading = (_heading % 360 + 360) % 360;
         String cardinale = _getDirezioneCardinale(normalizedHeading);
 
+        // Se la bussola è attiva, ruota la mappa in base ai sensori
         if (_bussolaAttiva && snapshot.hasData) {
           try {
             widget.mapController.rotate(-normalizedHeading);
@@ -1544,7 +1546,7 @@ class _WidgetBussolaSensoriState extends State<WidgetBussolaSensori> {
                 setState(() {
                   _bussolaAttiva = !_bussolaAttiva;
                   if (!_bussolaAttiva) {
-                    widget.mapController.rotate(0.0);
+                    widget.mapController.rotate(0.0); // Reset Nord quando spenta
                   }
                 });
               },
@@ -1582,17 +1584,19 @@ class _WidgetBussolaSensoriState extends State<WidgetBussolaSensori> {
               ),
             ),
             const SizedBox(height: 4),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: Colors.black54,
-                borderRadius: BorderRadius.circular(4),
+            // Mostra i gradi e la direzione cardinale SOLO se la bussola è attiva
+            if (_bussolaAttiva)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  '${normalizedHeading.toStringAsFixed(0)}° - $cardinale',
+                  style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                ),
               ),
-              child: Text(
-                '${normalizedHeading.toStringAsFixed(0)}° - $cardinale',
-                style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-              ),
-            ),
           ],
         );
       },
@@ -1771,6 +1775,7 @@ class PuntoIdrico {
   final String ubicazione;
   String stato;
   final double latitudine;
+  final DataTransfer? _placeholderDato = null;
   final double longitudine;
   final List<String> mezziCompatibili;
   final bool hasUni45;
