@@ -292,7 +292,6 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  // Impostazioni iniziali di default (ogniqualvolta si fa refresh o si rientra)
   String _filtroSelezionato = 'Tutti';
   bool _usaMappaTopografica = false;
 
@@ -597,7 +596,7 @@ class _HomePageState extends State<HomePage> {
     if (idrante.hasUni70) attacchi.add('UNI 70');
     String attacchiStr = attacchi.isNotEmpty ? attacchi.join(', ') : 'Nessuno';
 
-    // VERSIONE WEB (con i trattini puliti e senza emoji che danno problemi sui browser desktop)
+    // VERSIONE WEB (con i trattini puliti e senza emoji)
     String notaStrWeb = idrante.note.isNotEmpty ? '\n- Note: ${idrante.note}' : '';
     String mezziStrWeb = idrante.mezziCompatibili.isNotEmpty ? '\n- Mezzi: ${idrante.mezziCompatibili.join(', ')}' : '';
     String modStrWeb = idrante.modificatoDa.isNotEmpty ? '\n- Modifica: ${idrante.modificatoDa}' : '';
@@ -615,7 +614,7 @@ class _HomePageState extends State<HomePage> {
 - Mappa: https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.longitudine}
 ''';
 
-    // VERSIONE MOBILE APP (con le emoji colorate e brillanti, supportate nativamente da Android)
+    // VERSIONE MOBILE APP (con le emoji colorate)
     String notaStrApp = idrante.note.isNotEmpty ? '\n📝 Note: ${idrante.note}' : '';
     String mezziStrApp = idrante.mezziCompatibili.isNotEmpty ? '\n🚒 Mezzi: ${idrante.mezziCompatibili.join(', ')}' : '';
     String modStrApp = idrante.modificatoDa.isNotEmpty ? '\n👤 Modifica: ${idrante.modificatoDa}' : '';
@@ -633,7 +632,6 @@ class _HomePageState extends State<HomePage> {
 🗺️ Mappa: https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.longitudine}
 ''';
 
-    // Se siamo sul web usiamo i trattini (testoWeb), se siamo su app mobile usiamo le emoji (testoApp)
     String testoFinale = kIsWeb ? testoWeb : testoApp;
 
     final Uri whatsappWebUri = Uri.parse('https://wa.me/?text=${Uri.encodeComponent(testoFinale)}');
@@ -801,6 +799,25 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // APRE LA MAPPA A TUTTO SCHERMO IN UNA NUOVA PAGINA
+  void _apriMappaFullscreen() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => MappaFullscreenPage(
+          listaIdranti: listaIdranti,
+          posizioneLat: posizioneCorrenteLat,
+          posizioneLng: posizioneCorrenteLng,
+          usaMappaTopografica: _usaMappaTopografica,
+          onTapIdrante: (idrante) {
+            double dist = _calcolaDistanzaKm(posizioneCorrenteLat, posizioneCorrenteLng, idrante.latitudine, idrante.longitudine);
+            _mostraDettaglioIdrante(idrante, dist);
+          },
+        ),
       ),
     );
   }
@@ -1100,95 +1117,129 @@ class _HomePageState extends State<HomePage> {
           const SizedBox(width: 4),
         ],
       ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (_caricamentoCloud) const LinearProgressIndicator(color: Colors.orange),
-          Container(
-            height: 32,
-            color: Colors.blue[900],
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('Mappa AIB', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
-                Text('GPS: ${posizioneCorrenteLat.toStringAsFixed(4)}, ${posizioneCorrenteLng.toStringAsFixed(4)}',
-                    style: const TextStyle(color: Colors.white70, fontSize: 11)),
-              ],
-            ),
-          ),
-          // MAPPA AMPLIATA: altezza portata a 310 pixel per dare molta più visuale
-          SizedBox(
-            height: 310,
-            child: FlutterMap(
-              mapController: _mapController,
-              options: MapOptions(initialCenter: LatLng(posizioneCorrenteLat, posizioneCorrenteLng), initialZoom: 13.5),
-              children: [
-                TileLayer(
-                  urlTemplate: _usaMappaTopografica
-                      ? 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png'
-                      : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                  subdomains: _usaMappaTopografica ? const ['a', 'b', 'c'] : const [],
-                  userAgentPackageName: 'com.example.idranti_aib',
-                  maxZoom: 17,
-                ),
-                MarkerLayer(
-                  markers: [
-                    Marker(
-                      point: LatLng(posizioneCorrenteLat, posizioneCorrenteLng),
-                      child: const Icon(Icons.navigation, color: Colors.blueAccent, size: 30),
-                    ),
-                    ...idrantiMostrati.map((idrante) {
-                      return Marker(
-                        point: LatLng(idrante.latitudine, idrante.longitudine),
-                        child: GestureDetector(
-                          onTap: () => _mostraDettaglioIdrante(idrante, _calcolaDistanzaKm(posizioneCorrenteLat, posizioneCorrenteLng, idrante.latitudine, idrante.longitudine)),
-                          child: CircleAvatar(
-                            backgroundColor: _getColoreStato(idrante.stato),
-                            child: _buildIconaSimbolo(idrante, size: 18),
-                          ),
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (_caricamentoCloud) const LinearProgressIndicator(color: Colors.orange),
+            Container(
+              height: 36,
+              color: Colors.blue[900],
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Mappa AIB', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
+                  Row(
+                    children: [
+                      Text('GPS: ${posizioneCorrenteLat.toStringAsFixed(4)}, ${posizioneCorrenteLng.toStringAsFixed(4)}',
+                          style: const TextStyle(color: Colors.white70, fontSize: 11)),
+                      const SizedBox(width: 8),
+                      // TASTO FULLSCREEN NELLA BARRA DELLA MAPPA
+                      InkWell(
+                        onTap: _apriMappaFullscreen,
+                        child: const Row(
+                          children: [
+                            Icon(Icons.fullscreen, color: Colors.white, size: 16),
+                            SizedBox(width: 2),
+                            Text('Schermo Intero', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                          ],
                         ),
-                      );
-                    }),
-                  ],
-                ),
-              ],
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('Punti Censiti (${listaIdranti.length})', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                ElevatedButton.icon(
-                  onPressed: _mostraDialogoNuovoIdrante,
-                  icon: const Icon(Icons.add, size: 14),
-                  label: const Text('Idrante', style: TextStyle(fontSize: 12)),
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.blue[700], foregroundColor: Colors.white, minimumSize: const Size(0, 32)),
-                ),
-              ],
+            // MAPPA STANDARD RIPRISTINATA COME ALL'INIZIO (altezza 240)
+            SizedBox(
+              height: 240,
+              child: Stack(
+                children: [
+                  FlutterMap(
+                    mapController: _mapController,
+                    options: MapOptions(initialCenter: LatLng(posizioneCorrenteLat, posizioneCorrenteLng), initialZoom: 13.5),
+                    children: [
+                      TileLayer(
+                        urlTemplate: _usaMappaTopografica
+                            ? 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png'
+                            : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        subdomains: _usaMappaTopografica ? const ['a', 'b', 'c'] : const [],
+                        userAgentPackageName: 'com.example.idranti_aib',
+                        maxZoom: 17,
+                      ),
+                      MarkerLayer(
+                        markers: [
+                          Marker(
+                            point: LatLng(posizioneCorrenteLat, posizioneCorrenteLng),
+                            child: const Icon(Icons.navigation, color: Colors.blueAccent, size: 30),
+                          ),
+                          ...idrantiMostrati.map((idrante) {
+                            return Marker(
+                              point: LatLng(idrante.latitudine, idrante.longitudine),
+                              child: GestureDetector(
+                                onTap: () => _mostraDettaglioIdrante(idrante, _calcolaDistanzaKm(posizioneCorrenteLat, posizioneCorrenteLng, idrante.latitudine, idrante.longitudine)),
+                                child: CircleAvatar(
+                                  backgroundColor: _getColoreStato(idrante.stato),
+                                  child: _buildIconaSimbolo(idrante, size: 18),
+                                ),
+                              ),
+                            );
+                          }),
+                        ],
+                      ),
+                    ],
+                  ),
+                  // PULSANTE FLUTTUANTE SULLA MAPPA PER IL FULLSCREEN
+                  Positioned(
+                    right: 10,
+                    top: 10,
+                    child: FloatingActionButton.small(
+                      heroTag: 'fullscreen_btn',
+                      backgroundColor: Colors.blue[800],
+                      foregroundColor: Colors.white,
+                      tooltip: 'Espandi Mappa a Schermo Intero',
+                      onPressed: _apriMappaFullscreen,
+                      child: const Icon(Icons.fullscreen, size: 24),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 12.0),
-            child: Row(children: [_buildFilterChip('Tutti'), _buildFilterChip('Idranti'), _buildFilterChip('Vasche'), _buildFilterChip('Prese d\'Acqua')]),
-          ),
-          const SizedBox(height: 4),
-          // LISTA ABASSATA E SCORRIBILE: usa Expanded per occupare lo spazio rimanente in basso
-          Expanded(
-            child: ListView.builder(
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Punti Censiti (${listaIdranti.length})', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                  ElevatedButton.icon(
+                    onPressed: _mostraDialogoNuovoIdrante,
+                    icon: const Icon(Icons.add, size: 16),
+                    label: const Text('Idrante'),
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.blue[700], foregroundColor: Colors.white),
+                  ),
+                ],
+              ),
+            ),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 12.0),
+              child: Row(children: [_buildFilterChip('Tutti'), _buildFilterChip('Idranti'), _buildFilterChip('Vasche'), _buildFilterChip('Prese d\'Acqua')]),
+            ),
+            const SizedBox(height: 6),
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
               itemCount: idrantiMostrati.length,
               itemBuilder: (ctx, index) {
                 final idrante = idrantiMostrati[index];
                 double dist = _calcolaDistanzaKm(posizioneCorrenteLat, posizioneCorrenteLng, idrante.latitudine, idrante.longitudine);
                 return Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                  margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   child: InkWell(
                     onTap: () => _mostraDettaglioIdrante(idrante, dist),
                     child: Padding(
-                      padding: const EdgeInsets.all(8.0),
+                      padding: const EdgeInsets.all(10.0),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -1201,9 +1252,9 @@ class _HomePageState extends State<HomePage> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('${idrante.codice} - ${idrante.tipo}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                                Text('${idrante.ubicazione} (${idrante.isH24 ? "H24" : "Privato"})', style: const TextStyle(fontSize: 11)),
-                                const SizedBox(height: 2),
+                                Text('${idrante.codice} - ${idrante.tipo}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                                Text('${idrante.ubicazione} (${idrante.isH24 ? "H24" : "Privato"})', style: const TextStyle(fontSize: 12)),
+                                const SizedBox(height: 4),
                                 Row(
                                   children: [
                                     _buildBadgeAttacco('UNI 45', idrante.hasUni45),
@@ -1214,27 +1265,27 @@ class _HomePageState extends State<HomePage> {
                                   ],
                                 ),
                                 if (idrante.mezziCompatibili.isNotEmpty)
-                                  Text('Mezzi: ${idrante.mezziCompatibili.join(', ')}', style: const TextStyle(fontSize: 10, color: Colors.blueGrey)),
+                                  Text('Mezzi: ${idrante.mezziCompatibili.join(', ')}', style: const TextStyle(fontSize: 11, color: Colors.blueGrey)),
                                 if (idrante.note.isNotEmpty)
-                                  Text('Note: ${idrante.note}', style: TextStyle(fontSize: 10, fontStyle: FontStyle.italic, color: Colors.amber[900])),
+                                  Text('Note: ${idrante.note}', style: TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: Colors.amber[900])),
                                 if (idrante.modificatoDa.isNotEmpty)
-                                  Text('Modificato da: ${idrante.modificatoDa}', style: const TextStyle(fontSize: 9, color: Colors.grey)),
-                                const SizedBox(height: 4),
+                                  Text('Modificato da: ${idrante.modificatoDa}', style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                                const SizedBox(height: 6),
                                 Row(
                                   children: [
                                     if (possoModificareEEliminare)
                                       InkWell(
                                         onTap: () => _mostraDialogoModificaIdrante(idrante),
-                                        child: const Padding(padding: EdgeInsets.only(right: 12.0), child: Icon(Icons.edit, size: 18, color: Colors.orange)),
+                                        child: const Padding(padding: EdgeInsets.only(right: 12.0), child: Icon(Icons.edit, size: 20, color: Colors.orange)),
                                       ),
                                     if (possoModificareEEliminare)
                                       InkWell(
                                         onTap: () => _confermaEliminazioneIdrante(idrante),
-                                        child: const Padding(padding: EdgeInsets.only(right: 12.0), child: Icon(Icons.delete, size: 18, color: Colors.red)),
+                                        child: const Padding(padding: EdgeInsets.only(right: 12.0), child: Icon(Icons.delete, size: 20, color: Colors.red)),
                                       ),
                                     PopupMenuButton<String>(
                                       padding: EdgeInsets.zero,
-                                      icon: const Icon(Icons.build_circle, size: 18, color: Colors.blueGrey),
+                                      icon: const Icon(Icons.build_circle, size: 20, color: Colors.blueGrey),
                                       onSelected: (st) => _cambiaStatoIdrante(idrante, st),
                                       itemBuilder: (_) => [
                                         const PopupMenuItem(value: 'Funzionante', child: Text('Funzionante')),
@@ -1244,7 +1295,7 @@ class _HomePageState extends State<HomePage> {
                                     ),
                                     InkWell(
                                       onTap: () => _condividiPuntoIdrico(idrante),
-                                      child: const Padding(padding: EdgeInsets.symmetric(horizontal: 8.0), child: Icon(Icons.share, size: 18, color: Colors.green)),
+                                      child: const Padding(padding: EdgeInsets.symmetric(horizontal: 8.0), child: Icon(Icons.share, size: 20, color: Colors.green)),
                                     ),
                                   ],
                                 ),
@@ -1258,8 +1309,8 @@ class _HomePageState extends State<HomePage> {
                 );
               },
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -1425,6 +1476,92 @@ class _HomePageState extends State<HomePage> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// PAGINA DEDICATA ALLA MAPPA A TUTTO SCHERMO
+class MappaFullscreenPage extends StatelessWidget {
+  final List<PuntoIdrico> listaIdranti;
+  final double posizioneLat;
+  final double posizioneLng;
+  final bool usaMappaTopografica;
+  final Function(PuntoIdrico) onTapIdrante;
+
+  const MappaFullscreenPage({
+    super.key,
+    required this.listaIdranti,
+    required this.posizioneLat,
+    required this.posizioneLng,
+    required this.usaMappaTopografica,
+    required this.onTapIdrante,
+  });
+
+  Color _getColoreStato(String stato) {
+    switch (stato) {
+      case 'Non Funzionante':
+        return Colors.red[700]!;
+      case 'Da Verificare':
+        return Colors.orange[800]!;
+      default:
+        return Colors.green[700]!;
+    }
+  }
+
+  Widget _buildIconaSimbolo(PuntoIdrico idrante, {double size = 20}) {
+    if (idrante.stato == 'Non Funzionante') return Icon(Icons.close, size: size, color: Colors.white);
+    if (idrante.stato == 'Da Verificare') return Icon(Icons.question_mark, size: size * 0.8, color: Colors.white);
+    if (idrante.tipo.contains('Vasca')) return IconaVascaAIB(size: size);
+    if (idrante.tipo.contains('Presa')) return Icon(Icons.waves, size: size, color: Colors.white);
+    return Icon(Icons.fire_hydrant_alt, size: size, color: Colors.white);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.blue[800],
+        foregroundColor: Colors.white,
+        title: const Text('Mappa AIB - Schermo Intero'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+          tooltip: 'Torna Indietro',
+        ),
+      ),
+      body: FlutterMap(
+        options: MapOptions(initialCenter: LatLng(posizioneLat, posizioneLng), initialZoom: 14.0),
+        children: [
+          TileLayer(
+            urlTemplate: usaMappaTopografica
+                ? 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png'
+                : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+            subdomains: usaMappaTopografica ? const ['a', 'b', 'c'] : const [],
+            userAgentPackageName: 'com.example.idranti_aib',
+            maxZoom: 17,
+          ),
+          MarkerLayer(
+            markers: [
+              Marker(
+                point: LatLng(posizioneLat, posizioneLng),
+                child: const Icon(Icons.navigation, color: Colors.blueAccent, size: 32),
+              ),
+              ...listaIdranti.map((idrante) {
+                return Marker(
+                  point: LatLng(idrante.latitudine, idrante.longitudine),
+                  child: GestureDetector(
+                    onTap: () => onTapIdrante(idrante),
+                    child: CircleAvatar(
+                      backgroundColor: _getColoreStato(idrante.stato),
+                      child: _buildIconaSimbolo(idrante, size: 18),
+                    ),
+                  ),
+                );
+              }),
+            ],
+          ),
+        ],
       ),
     );
   }
