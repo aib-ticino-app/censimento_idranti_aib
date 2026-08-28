@@ -1498,7 +1498,6 @@ class WidgetBussolaSensori extends StatefulWidget {
 }
 
 class _WidgetBussolaSensoriState extends State<WidgetBussolaSensori> {
-  // Impostata a false per default come richiesto
   bool _bussolaAttiva = false;
   double _heading = 0.0;
 
@@ -1530,7 +1529,6 @@ class _WidgetBussolaSensoriState extends State<WidgetBussolaSensori> {
         double normalizedHeading = (_heading % 360 + 360) % 360;
         String cardinale = _getDirezioneCardinale(normalizedHeading);
 
-        // Se la bussola è attiva, ruota la mappa in base ai sensori
         if (_bussolaAttiva && snapshot.hasData) {
           try {
             widget.mapController.rotate(-normalizedHeading);
@@ -1546,7 +1544,7 @@ class _WidgetBussolaSensoriState extends State<WidgetBussolaSensori> {
                 setState(() {
                   _bussolaAttiva = !_bussolaAttiva;
                   if (!_bussolaAttiva) {
-                    widget.mapController.rotate(0.0); // Reset Nord quando spenta
+                    widget.mapController.rotate(0.0);
                   }
                 });
               },
@@ -1584,7 +1582,6 @@ class _WidgetBussolaSensoriState extends State<WidgetBussolaSensori> {
               ),
             ),
             const SizedBox(height: 4),
-            // Mostra i gradi e la direzione cardinale SOLO se la bussola è attiva
             if (_bussolaAttiva)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -1651,7 +1648,6 @@ class _LancettaBussolaPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }
 
-// PAGINA DEDICATA ALLA MAPPA A TUTTO SCHERMO
 class MappaFullscreenPage extends StatelessWidget {
   final List<PuntoIdrico> listaIdranti;
   final double posizioneLat;
@@ -1775,7 +1771,6 @@ class PuntoIdrico {
   final String ubicazione;
   String stato;
   final double latitudine;
-  final DataTransfer? _placeholderDato = null;
   final double longitudine;
   final List<String> mezziCompatibili;
   final bool hasUni45;
