@@ -586,6 +586,7 @@ class _HomePageState extends State<HomePage> {
     return '32$banda ${easting.toStringAsFixed(0)} E, ${northing.toStringAsFixed(0)} N';
   }
 
+  // CONDIVISIONE CORRETTA PER APK E WEB
   void _condividiPuntoIdrico(PuntoIdrico idrante) async {
     String latGMS = _convertiInWGS84GMS(idrante.latitudine, true);
     String lngGMS = _convertiInWGS84GMS(idrante.longitudine, false);
@@ -596,7 +597,6 @@ class _HomePageState extends State<HomePage> {
     if (idrante.hasUni70) attacchi.add('UNI 70');
     String attacchiStr = attacchi.isNotEmpty ? attacchi.join(', ') : 'Nessuno';
 
-    // VERSIONE WEB (con i trattini puliti e senza emoji)
     String notaStrWeb = idrante.note.isNotEmpty ? '\n- Note: ${idrante.note}' : '';
     String mezziStrWeb = idrante.mezziCompatibili.isNotEmpty ? '\n- Mezzi: ${idrante.mezziCompatibili.join(', ')}' : '';
     String modStrWeb = idrante.modificatoDa.isNotEmpty ? '\n- Modifica: ${idrante.modificatoDa}' : '';
@@ -614,7 +614,6 @@ class _HomePageState extends State<HomePage> {
 - Mappa: https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.longitudine}
 ''';
 
-    // VERSIONE MOBILE APP (con le emoji colorate)
     String notaStrApp = idrante.note.isNotEmpty ? '\n📝 Note: ${idrante.note}' : '';
     String mezziStrApp = idrante.mezziCompatibili.isNotEmpty ? '\n🚒 Mezzi: ${idrante.mezziCompatibili.join(', ')}' : '';
     String modStrApp = idrante.modificatoDa.isNotEmpty ? '\n👤 Modifica: ${idrante.modificatoDa}' : '';
@@ -641,11 +640,11 @@ class _HomePageState extends State<HomePage> {
       if (kIsWeb) {
         await launchUrl(whatsappWebUri, mode: LaunchMode.externalApplication);
       } else {
+        // Tenta l'apertura diretta di WhatsApp o di un app di messaggistica esterna
         if (await canLaunchUrl(whatsappDirectUri)) {
           await launchUrl(whatsappDirectUri, mode: LaunchMode.externalApplication);
         } else {
-          await Clipboard.setData(ClipboardData(text: testoFinale));
-          _mostraMessaggio('Copiato negli appunti!');
+          await launchUrl(whatsappWebUri, mode: LaunchMode.externalApplication);
         }
       }
     } catch (_) {
@@ -803,7 +802,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // APRE LA MAPPA A TUTTO SCHERMO IN UNA NUOVA PAGINA
   void _apriMappaFullscreen() {
     Navigator.push(
       context,
@@ -1135,7 +1133,6 @@ class _HomePageState extends State<HomePage> {
                       Text('GPS: ${posizioneCorrenteLat.toStringAsFixed(4)}, ${posizioneCorrenteLng.toStringAsFixed(4)}',
                           style: const TextStyle(color: Colors.white70, fontSize: 11)),
                       const SizedBox(width: 8),
-                      // TASTO FULLSCREEN NELLA BARRA DELLA MAPPA
                       InkWell(
                         onTap: _apriMappaFullscreen,
                         child: const Row(
@@ -1151,14 +1148,17 @@ class _HomePageState extends State<HomePage> {
                 ],
               ),
             ),
-            // MAPPA STANDARD RIPRISTINATA COME ALL'INIZIO (altezza 240)
+            // MAPPA STANDARD CON BUSSOLA DIGITALE INTEGRATA
             SizedBox(
               height: 240,
               child: Stack(
                 children: [
                   FlutterMap(
                     mapController: _mapController,
-                    options: MapOptions(initialCenter: LatLng(posizioneCorrenteLat, posizioneCorrenteLng), initialZoom: 13.5),
+                    options: MapOptions(
+                      initialCenter: LatLng(posizioneCorrenteLat, posizioneCorrenteLng),
+                      initialZoom: 13.5,
+                    ),
                     children: [
                       TileLayer(
                         urlTemplate: _usaMappaTopografica
@@ -1190,7 +1190,13 @@ class _HomePageState extends State<HomePage> {
                       ),
                     ],
                   ),
-                  // PULSANTE FLUTTUANTE SULLA MAPPA PER IL FULLSCREEN
+                  // BUSSOLA DIGITALE NELL'ANGOLO SUPERIORE SINISTRO
+                  Positioned(
+                    left: 10,
+                    top: 10,
+                    child: WidgetBussolaDigitale(mapController: _mapController),
+                  ),
+                  // PULSANTE FULLSCREEN NELL'ANGOLO SUPERIORE DESTRO
                   Positioned(
                     right: 10,
                     top: 10,
@@ -1481,6 +1487,79 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
+// WIDGET BUSSOLA DIGITALE (ROSSA = NORD, GRIGIA = SUD, TOCCO = RESETTA ORIENTAMENTO)
+class WidgetBussolaDigitale extends StatelessWidget {
+  final MapController mapController;
+  const WidgetBussolaDigitale({super.key, required.this.mapController});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<void>(
+      stream: mapController.mapEventStream,
+      builder: (context, snapshot) {
+        double rotation = mapController.camera.rotation;
+        return GestureDetector(
+          onTap: () {
+            mapController.rotate(0);
+          },
+          child: Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.9),
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 4, offset: const Offset(0, 2)),
+              ],
+            ),
+            child: Transform.rotate(
+              angle: rotation * (pi / 180),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  // Punta freccia SUD (Grigia/Nera)
+                  Positioned(
+                    bottom: 6,
+                    child: Container(
+                      width: 4,
+                      height: 12,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[700],
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  // Punta freccia NORD (Rossa)
+                  Positioned(
+                    top: 6,
+                    child: Container(
+                      width: 4,
+                      height: 12,
+                      decoration: BoxDecoration(
+                        color: Colors.red[700],
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  // Centro della bussola
+                  Container(
+                    width: 6,
+                    height: 6,
+                    decoration: const BoxDecoration(
+                      color: Colors.black54,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
 // PAGINA DEDICATA ALLA MAPPA A TUTTO SCHERMO
 class MappaFullscreenPage extends StatelessWidget {
   final List<PuntoIdrico> listaIdranti;
@@ -1519,6 +1598,8 @@ class MappaFullscreenPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final MapController fullscreenMapController = MapController();
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.blue[800],
@@ -1530,36 +1611,46 @@ class MappaFullscreenPage extends StatelessWidget {
           tooltip: 'Torna Indietro',
         ),
       ),
-      body: FlutterMap(
-        options: MapOptions(initialCenter: LatLng(posizioneLat, posizioneLng), initialZoom: 14.0),
+      body: Stack(
         children: [
-          TileLayer(
-            urlTemplate: usaMappaTopografica
-                ? 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png'
-                : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-            subdomains: usaMappaTopografica ? const ['a', 'b', 'c'] : const [],
-            userAgentPackageName: 'com.example.idranti_aib',
-            maxZoom: 17,
-          ),
-          MarkerLayer(
-            markers: [
-              Marker(
-                point: LatLng(posizioneLat, posizioneLng),
-                child: const Icon(Icons.navigation, color: Colors.blueAccent, size: 32),
+          FlutterMap(
+            mapController: fullscreenMapController,
+            options: MapOptions(initialCenter: LatLng(posizioneLat, posizioneLng), initialZoom: 14.0),
+            children: [
+              TileLayer(
+                urlTemplate: usaMappaTopografica
+                    ? 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png'
+                    : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                subdomains: usaMappaTopografica ? const ['a', 'b', 'c'] : const [],
+                userAgentPackageName: 'com.example.idranti_aib',
+                maxZoom: 17,
               ),
-              ...listaIdranti.map((idrante) {
-                return Marker(
-                  point: LatLng(idrante.latitudine, idrante.longitudine),
-                  child: GestureDetector(
-                    onTap: () => onTapIdrante(idrante),
-                    child: CircleAvatar(
-                      backgroundColor: _getColoreStato(idrante.stato),
-                      child: _buildIconaSimbolo(idrante, size: 18),
-                    ),
+              MarkerLayer(
+                markers: [
+                  Marker(
+                    point: LatLng(posizioneLat, posizioneLng),
+                    child: const Icon(Icons.navigation, color: Colors.blueAccent, size: 32),
                   ),
-                );
-              }),
+                  ...listaIdranti.map((idrante) {
+                    return Marker(
+                      point: LatLng(idrante.latitudine, idrante.longitudine),
+                      child: GestureDetector(
+                        onTap: () => onTapIdrante(idrante),
+                        child: CircleAvatar(
+                          backgroundColor: _getColoreStato(idrante.stato),
+                          child: _buildIconaSimbolo(idrante, size: 18),
+                        ),
+                      ),
+                    );
+                  }),
+                ],
+              ),
             ],
+          ),
+          Positioned(
+            left: 15,
+            top: 15,
+            child: WidgetBussolaDigitale(mapController: fullscreenMapController),
           ),
         ],
       ),
