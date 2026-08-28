@@ -47247,7 +47247,7 @@ h=j.length!==0?"\n\ud83d\ude92 Mezzi: "+B.b.be(j,", "):""
 j=a2.at
 g=j.length!==0?"\n\ud83d\udc64 Ultima modifica: "+j:""
 j=a2.z?"H24":"Privato"
-n="\ud83d\udea8 *PUNTO IDRICO AIB*\n\ud83d\udccd Codice: "+a2.b+" ("+a2.c+")\n\ud83d\udccc Ubicazione: "+a2.d+"\n\ud83d\udd11 Accesso: "+j+"\n\ud83d\udfe2 Stato: "+a2.e+"\n\u2699\ufe0f Attacchi: "+k+h+i+g+"\n\n\ud83c\udf10 WGS84: "+d+" - "+b+"\n\ud83d\udcd0 UTM: "+a+"\n\ud83d\uddfa\ufe0f Mappa: https://www.google.com/maps/search/?api=1&query="+A.j(e)+","+A.j(c)+"\n"
+n="\ud83d\udea8 *PUNTO IDRICO AIB*\n\ud83d\udccc Codice: "+a2.b+" ("+a2.c+")\n\ud83d\udccd Ubicazione: "+a2.d+"\n\ud83d\udd11 Accesso: "+j+"\n\ud83d\udfe2 Stato: "+a2.e+"\n\u2699\ufe0f Attacchi: "+k+h+i+g+"\n\n\ud83c\udf10 WGS84: "+d+" - "+b+"\n\ud83d\udcd0 UTM: "+a+"\n\ud83d\uddfa\ufe0f Mappa: https://www.google.com/maps/search/?api=1&query="+A.j(e)+","+A.j(c)+"\n"
 m=A.cy("whatsapp://send?text="+A.pg(2,n,B.R,!1),0,null)
 l=A.cy("https://wa.me/?text="+A.pg(2,n,B.R,!1),0,null)
 q=3

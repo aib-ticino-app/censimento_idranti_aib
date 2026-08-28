@@ -595,21 +595,35 @@ class _HomePageState extends State<HomePage> {
     if (idrante.hasUni70) attacchi.add('UNI 70');
     String attacchiStr = attacchi.isNotEmpty ? attacchi.join(', ') : 'Nessuno';
 
-    String notaStr = idrante.note.isNotEmpty ? '\n📝 Note: ${idrante.note}' : '';
-    String mezziStr = idrante.mezziCompatibili.isNotEmpty ? '\n🚒 Mezzi: ${idrante.mezziCompatibili.join(', ')}' : '';
-    String modStr = idrante.modificatoDa.isNotEmpty ? '\n👤 Ultima modifica: ${idrante.modificatoDa}' : '';
+    // Emoji protette tramite sequenze Unicode esadecimali native di Dart
+    String eSirena = '\u{1F6A8}';
+    String ePuntina = '\u{1F4CC}';
+    String eMappaPin = '\u{1F4CD}';
+    String eChiave = '\u{1F511}';
+    String eCerchioVerde = '\u{1F7E2}';
+    String eIngranaggio = '\u{2699}\u{FE0F}';
+    String ePompiere = '\u{1F692}';
+    String eMondo = '\u{1F310}';
+    String eRighello = '\u{1F4D0}';
+    String eMappaMondo = '\u{1F5FA}\u{FE0F}';
+    String eNota = '\u{1F4DD}';
+    String eUtente = '\u{1F464}';
+
+    String notaStr = idrante.note.isNotEmpty ? '\n$eNota Note: ${idrante.note}' : '';
+    String mezziStr = idrante.mezziCompatibili.isNotEmpty ? '\n$ePompiere Mezzi: ${idrante.mezziCompatibili.join(', ')}' : '';
+    String modStr = idrante.modificatoDa.isNotEmpty ? '\n$eUtente Ultima modifica: ${idrante.modificatoDa}' : '';
 
     String testo = '''
-🚨 *PUNTO IDRICO AIB*
-📍 Codice: ${idrante.codice} (${idrante.tipo})
-📌 Ubicazione: ${idrante.ubicazione}
-🔑 Accesso: ${idrante.isH24 ? "H24" : "Privato"}
-🟢 Stato: ${idrante.stato}
-⚙️ Attacchi: $attacchiStr$mezziStr$notaStr$modStr
+$eSirena *PUNTO IDRICO AIB*
+$ePuntina Codice: ${idrante.codice} (${idrante.tipo})
+$eMappaPin Ubicazione: ${idrante.ubicazione}
+$eChiave Accesso: ${idrante.isH24 ? "H24" : "Privato"}
+$eCerchioVerde Stato: ${idrante.stato}
+$eIngranaggio Attacchi: $attacchiStr$mezziStr$notaStr$modStr
 
-🌐 WGS84: $latGMS - $lngGMS
-📐 UTM: $utmStr
-🗺️ Mappa: https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.longitudine}
+$eMondo WGS84: $latGMS - $lngGMS
+$eRighello UTM: $utmStr
+$eMappaMondo Mappa: https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.longitudine}
 ''';
 
     final Uri whatsappDirectUri = Uri.parse('whatsapp://send?text=${Uri.encodeComponent(testo)}');
