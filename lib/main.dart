@@ -595,21 +595,22 @@ class _HomePageState extends State<HomePage> {
     if (idrante.hasUni70) attacchi.add('UNI 70');
     String attacchiStr = attacchi.isNotEmpty ? attacchi.join(', ') : 'Nessuno';
 
-    String notaStr = idrante.note.isNotEmpty ? '\n- Note: ${idrante.note}' : '';
-    String mezziStr = idrante.mezziCompatibili.isNotEmpty ? '\n- Mezzi: ${idrante.mezziCompatibili.join(', ')}' : '';
-    String modStr = idrante.modificatoDa.isNotEmpty ? '\n- Ultima modifica: ${idrante.modificatoDa}' : '';
+    String notaStr = idrante.note.isNotEmpty ? '\n📝 *Note:* ${idrante.note}' : '';
+    String mezziStr = idrante.mezziCompatibili.isNotEmpty ? '\n🚒 *Mezzi:* ${idrante.mezziCompatibili.join(', ')}' : '';
+    String modStr = idrante.modificatoDa.isNotEmpty ? '\n👤 *Ultima modifica:* ${idrante.modificatoDa}' : '';
 
+    // Messaggio ottimizzato per massima leggibilità a colpo d'occhio
     String testo = '''
-*PUNTO IDRICO AIB*
-- Codice: ${idrante.codice} (${idrante.tipo})
-- Ubicazione: ${idrante.ubicazione}
-- Accesso: ${idrante.isH24 ? "H24" : "Privato"}
-- Stato: ${idrante.stato}
-- Attacchi: $attacchiStr$mezziStr$notaStr$modStr
+🚨 *PUNTO IDRICO AIB* 🚨
+📍 *Codice:* ${idrante.codice} (${idrante.tipo})
+📌 *Ubicazione:* ${idrante.ubicazione}
+🔑 *Accesso:* ${idrante.isH24 ? "H24 (Pubblico)" : "Privato"}
+🟢 *Stato:* ${idrante.stato}
+⚙️ *Attacchi:* $attacchiStr$mezziStr$notaStr$modStr
 
-- WGS84: $latGMS - $lngGMS
-- UTM: $utmStr
-- Mappa: https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.longitudine}
+🌐 *WGS84:* $latGMS - $lngGMS
+📐 *UTM:* $utmStr
+🗺️ *Mappa:* https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.longitudine}
 ''';
 
     final Uri whatsappWebUri = Uri.parse('https://wa.me/?text=${Uri.encodeComponent(testo)}');
@@ -818,7 +819,7 @@ class _HomePageState extends State<HomePage> {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
         decoration: BoxDecoration(color: Colors.purple[800], borderRadius: BorderRadius.circular(4)),
-        child: const Text('ADMIN', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+        child: const Text('🛡️ ADMIN', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
       );
     }
 
@@ -891,15 +892,31 @@ class _HomePageState extends State<HomePage> {
               itemCount: utenti.length,
               itemBuilder: (context, index) {
                 final u = utenti[index];
-                return ListTile(
-                  title: Text('${u['nome_cognome']} (${u['distaccamento']})'),
-                  subtitle: Text('Ruolo: ${u['ruolo']} - ${u['approvato'] ? "APPROVATO" : "IN ATTESA"}'),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6.0),
+                  child: Row(
                     children: [
+                      // Usiamo Expanded così il nome e il distaccamento occupano lo spazio a disposizione senza rompersi a capo verticalmente
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('${u['nome_cognome']} (${u['distaccamento']})',
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                            const SizedBox(height: 2),
+                            Text('Ruolo: ${u['ruolo']} - ${u['approvato'] ? "APPROVATO" : "IN ATTESA"}',
+                                style: TextStyle(fontSize: 11, color: u['approvato'] ? Colors.green[800] : Colors.orange[800])),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      // Sezione tasto approvazione rapida se non approvato
                       if (!u['approvato'])
                         IconButton(
                           icon: const Icon(Icons.check_circle, color: Colors.green),
+                          tooltip: 'Approva utente',
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
                           onPressed: () async {
                             await supabase.from('profili_utenti').update({'approvato': true}).eq('id', u['id']);
                             Navigator.of(ctx).pop();
@@ -907,18 +924,29 @@ class _HomePageState extends State<HomePage> {
                             _controllaUtentiDaApprovare();
                           },
                         ),
-                      DropdownButton<String>(
-                        value: u['ruolo'],
-                        items: ['OPERATORE', 'CAPOSQUADRA', 'DOS', 'AMMINISTRATORE']
-                            .map((r) => DropdownMenuItem(value: r, child: Text(r, style: const TextStyle(fontSize: 12))))
-                            .toList(),
-                        onChanged: (nuovoRuolo) async {
-                          if (nuovoRuolo != null) {
-                            await supabase.from('profili_utenti').update({'ruolo': nuovoRuolo}).eq('id', u['id']);
-                            Navigator.of(ctx).pop();
-                            _apriPannelloAdmin();
-                          }
-                        },
+                      const SizedBox(width: 8),
+                      // Dropdown del ruolo con larghezza controllata
+                      SizedBox(
+                        width: 125,
+                        child: DropdownButtonFormField<String>(
+                          value: u['ruolo'],
+                          isDense: true,
+                          style: const TextStyle(fontSize: 11, color: Colors.black87),
+                          decoration: const InputDecoration(
+                            contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            border: OutlineInputBorder(),
+                          ),
+                          items: ['OPERATORE', 'CAPOSQUADRA', 'DOS', 'AMMINISTRATORE']
+                              .map((r) => DropdownMenuItem(value: r, child: Text(r, style: const TextStyle(fontSize: 11))))
+                              .toList(),
+                          onChanged: (nuovoRuolo) async {
+                            if (nuovoRuolo != null) {
+                              await supabase.from('profili_utenti').update({'ruolo': nuovoRuolo}).eq('id', u['id']);
+                              Navigator.of(ctx).pop();
+                              _apriPannelloAdmin();
+                            }
+                          },
+                        ),
                       ),
                     ],
                   ),
@@ -944,13 +972,13 @@ class _HomePageState extends State<HomePage> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Nome: ${mioProfilo?['nome_cognome'] ?? "N/D"}', style: const TextStyle(fontSize: 15)),
+              Text('👤 Nome: ${mioProfilo?['nome_cognome'] ?? "N/D"}', style: const TextStyle(fontSize: 15)),
               const SizedBox(height: 8),
-              Text('Distaccamento: ${mioProfilo?['distaccamento'] ?? "N/D"}', style: const TextStyle(fontSize: 15)),
+              Text('🚒 Distaccamento: ${mioProfilo?['distaccamento'] ?? "N/D"}', style: const TextStyle(fontSize: 15)),
               const SizedBox(height: 8),
-              Text('Sigla Operativa: ${mioProfilo?['sigla'] ?? "N/D"}', style: const TextStyle(fontSize: 15)),
+              Text('🏷️ Sigla Operativa: ${mioProfilo?['sigla'] ?? "N/D"}', style: const TextStyle(fontSize: 15)),
               const SizedBox(height: 8),
-              Text('Ruolo: ${mioProfilo?['ruolo'] ?? "N/D"}', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.blue)),
+              Text('⭐ Ruolo: ${mioProfilo?['ruolo'] ?? "N/D"}', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.blue)),
             ],
           ),
           actions: [
