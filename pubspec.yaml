@@ -1,29 +1,30 @@
-name: censimento_idranti_aib
-description: "A new Flutter project."
+name: idranti_aib
+description: "Censimento punti idrici AIB"
 publish_to: 'none'
-
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.13.0
+  sdk: '>=3.0.0 <4.0.0'
 
 dependencies:
   flutter:
     sdk: flutter
-  url_launcher: ^6.3.2
-  flutter_map: ^7.0.2
-  http: ^1.2.2
-  cupertino_icons: ^1.0.8
-  geolocator: ^13.0.1
-  supabase_flutter: ^2.8.0
-  shared_preferences: ^2.3.2
+  flutter_map: ^6.1.0
+  geolocator: ^10.1.0
+  supabase_flutter: ^2.0.0
+  shared_preferences: ^2.2.2
+  http: ^1.2.0
+  url_launcher: ^6.2.4
+  latlong2: ^0.9.1
+  flutter_compass: ^0.7.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^6.0.0
+  flutter_lints: ^3.0.0
 
 flutter:
   uses-material-design: true
+
   assets:
     - assets/logo.png

@@ -11,6 +11,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_compass/flutter_compass.dart';
 
 const String supabaseUrl = 'https://srielrbjejggxvpeshfd.supabase.co';
 const String supabaseApiKey =
@@ -380,8 +381,10 @@ class _HomePageState extends State<HomePage> {
           posizioneCorrenteLat = position.latitude;
           posizioneCorrenteLng = position.longitude;
         });
+        // Quando si preme il GPS, riportiamo la mappa al centro e azzeriamo la rotazione (Nord in alto)
         _mapController.move(LatLng(posizioneCorrenteLat, posizioneCorrenteLng), 14.5);
-        _mostraMessaggio('Posizione GPS aggiornata!');
+        _mapController.rotate(0.0);
+        _mostraMessaggio('Posizione GPS aggiornata e orientata al Nord!');
       }
     } catch (_) {
       _mostraMessaggio('Impossibile rilevare la posizione GPS.', isError: true);
@@ -1062,7 +1065,7 @@ class _HomePageState extends State<HomePage> {
           IconButton(
             icon: const Icon(Icons.my_location),
             onPressed: _ottieniPosizioneGPS,
-            tooltip: 'Aggiorna GPS',
+            tooltip: 'Aggiorna GPS e Nord',
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
           ),
@@ -1147,7 +1150,7 @@ class _HomePageState extends State<HomePage> {
                 ],
               ),
             ),
-            // MAPPA STANDARD CON BUSSOLA CLASSICA E BARRA GRADI
+            // MAPPA STANDARD CON BUSSOLA COLLEGATA AI SENSORI DEL TELEFONO
             SizedBox(
               height: 250,
               child: Stack(
@@ -1189,11 +1192,11 @@ class _HomePageState extends State<HomePage> {
                       ),
                     ],
                   ),
-                  // BUSSOLA CLASSICA CON QUADRANTE NELL'ANGOLO SUPERIORE SINISTRO
+                  // BUSSOLA COLLEGATA AI SENSORI FISICI NELL'ANGOLO SUPERIORE SINISTRO
                   Positioned(
                     left: 10,
                     top: 10,
-                    child: WidgetBussolaClassica(mapController: _mapController),
+                    child: WidgetBussolaSensori(mapController: _mapController),
                   ),
                   // PULSANTE FULLSCREEN NELL'ANGOLO SUPERIORE DESTRO
                   Positioned(
@@ -1486,16 +1489,16 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-// WIDGET BUSSOLA CLASSICA CON QUADRANTE ANALOGICO, GRADI E BARRA INFORMATIVA
-class WidgetBussolaClassica extends StatefulWidget {
+// WIDGET BUSSOLA COLLEGATA AI SENSORI FISICI DEL TELEFONO
+class WidgetBussolaSensori extends StatefulWidget {
   final MapController mapController;
-  const WidgetBussolaClassica({super.key, required this.mapController});
+  const WidgetBussolaSensori({super.key, required this.mapController});
 
   @override
-  State<WidgetBussolaClassica> createState() => _WidgetBussolaClassicaState();
+  State<WidgetBussolaSensori> createState() => _WidgetBussolaSensoriState();
 }
 
-class _WidgetBussolaClassicaState extends State<WidgetBussolaClassica> {
+class _WidgetBussolaSensoriState extends State<WidgetBussolaSensori> {
   bool _bussolaAttiva = true;
 
   String _getDirezioneCardinale(double gradi) {
@@ -1512,25 +1515,31 @@ class _WidgetBussolaClassicaState extends State<WidgetBussolaClassica> {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<void>(
-      stream: widget.mapController.mapEventStream,
+    return StreamBuilder<CompassEvent>(
+      stream: FlutterCompass.events,
       builder: (context, snapshot) {
-        double rawRotation = widget.mapController.camera.rotation;
-        double normalizedRotation = (rawRotation % 360 + 360) % 360;
-        double displayRotation = _bussolaAttiva ? rawRotation : 0.0;
-        String cardinale = _getDirezioneCardinale(normalizedRotation);
+        // Legge l'orientamento reale del telefono in gradi (0-360)
+        double heading = snapshot.data?.heading ?? 0.0;
+        double normalizedHeading = (heading % 360 + 360) % 360;
+        String cardinale = _getDirezioneCardinale(normalizedHeading);
+
+        // Se la bussola è attiva, ruotiamo la mappa in base al movimento del telefono
+        if (_bussolaAttiva && snapshot.hasData && snapshot.data?.heading != null) {
+          try {
+            widget.mapController.rotate(-normalizedHeading);
+          } catch (_) {}
+        }
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Icona bussola analogica classica
             GestureDetector(
               onTap: () {
                 setState(() {
                   _bussolaAttiva = !_bussolaAttiva;
-                  if (_bussolaAttiva) {
-                    widget.mapController.rotate(0);
+                  if (!_bussolaAttiva) {
+                    widget.mapController.rotate(0.0); // Riporta a Nord quando disattivata
                   }
                 });
               },
@@ -1551,15 +1560,13 @@ class _WidgetBussolaClassicaState extends State<WidgetBussolaClassica> {
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
-                    // Tacche cardinali fisse di sfondo (N, E, S, W)
                     const Positioned(top: 4, child: Text('N', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Colors.red))),
                     const Positioned(bottom: 4, child: Text('S', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Colors.grey))),
                     const Positioned(right: 5, child: Text('E', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Colors.grey))),
                     const Positioned(left: 5, child: Text('W', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Colors.grey))),
                     
-                    // Lancetta della bussola rotante
                     Transform.rotate(
-                      angle: displayRotation * (pi / 180),
+                      angle: (_bussolaAttiva ? normalizedHeading : 0.0) * (pi / 180),
                       child: CustomPaint(
                         size: const Size(32, 32),
                         painter: _LancettaBussolaPainter(attiva: _bussolaAttiva),
@@ -1570,7 +1577,6 @@ class _WidgetBussolaClassicaState extends State<WidgetBussolaClassica> {
               ),
             ),
             const SizedBox(height: 4),
-            // Barra dei gradi e orientamento
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
@@ -1578,7 +1584,7 @@ class _WidgetBussolaClassicaState extends State<WidgetBussolaClassica> {
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
-                '${normalizedRotation.toStringAsFixed(0)}° - $cardinale',
+                '${normalizedHeading.toStringAsFixed(0)}° - $cardinale',
                 style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
               ),
             ),
@@ -1589,7 +1595,6 @@ class _WidgetBussolaClassicaState extends State<WidgetBussolaClassica> {
   }
 }
 
-// PAINTER PER LANCETTA ROSSA E BIANCA/GRIGIA STILE BUSSOLA TRADIZIONALE
 class _LancettaBussolaPainter extends CustomPainter {
   final bool attiva;
   _LancettaBussolaPainter({required this.attiva});
@@ -1613,14 +1618,12 @@ class _LancettaBussolaPainter extends CustomPainter {
     final double h = size.height;
     final center = Offset(w / 2, h / 2);
 
-    // Triangolo Nord (Puntatore Rosso)
     final pathNord = ui.Path()
       ..moveTo(center.dx, 2)
       ..lineTo(center.dx + 5, center.dy)
       ..lineTo(center.dx - 5, center.dy)
       ..close();
 
-    // Triangolo Sud (Puntatore Bianco/Grigio)
     final pathSud = ui.Path()
       ..moveTo(center.dx, h - 2)
       ..lineTo(center.dx + 5, center.dy)
@@ -1632,7 +1635,6 @@ class _LancettaBussolaPainter extends CustomPainter {
     canvas.drawPath(pathSud, paintSud);
     canvas.drawPath(pathSud, paintBordo);
 
-    // Perno centrale
     canvas.drawCircle(center, 2.5, Paint()..color = Colors.black87);
   }
 
@@ -1730,7 +1732,7 @@ class MappaFullscreenPage extends StatelessWidget {
           Positioned(
             left: 15,
             top: 15,
-            child: WidgetBussolaClassica(mapController: fullscreenMapController),
+            child: WidgetBussolaSensori(mapController: fullscreenMapController),
           ),
         ],
       ),
