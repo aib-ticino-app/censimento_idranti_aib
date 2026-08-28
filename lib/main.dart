@@ -595,21 +595,21 @@ class _HomePageState extends State<HomePage> {
     if (idrante.hasUni70) attacchi.add('UNI 70');
     String attacchiStr = attacchi.isNotEmpty ? attacchi.join(', ') : 'Nessuno';
 
-    String notaStr = idrante.note.isNotEmpty ? '\n- Note: ${idrante.note}' : '';
-    String mezziStr = idrante.mezziCompatibili.isNotEmpty ? '\n- Mezzi: ${idrante.mezziCompatibili.join(', ')}' : '';
-    String modStr = idrante.modificatoDa.isNotEmpty ? '\n- Ultima modifica: ${idrante.modificatoDa}' : '';
+    String notaStr = idrante.note.isNotEmpty ? '\n📝 Note: ${idrante.note}' : '';
+    String mezziStr = idrante.mezziCompatibili.isNotEmpty ? '\n🚒 Mezzi: ${idrante.mezziCompatibili.join(', ')}' : '';
+    String modStr = idrante.modificatoDa.isNotEmpty ? '\n👤 Ultima modifica: ${idrante.modificatoDa}' : '';
 
     String testo = '''
-*PUNTO IDRICO AIB*
-- Codice: ${idrante.codice} (${idrante.tipo})
-- Ubicazione: ${idrante.ubicazione}
-- Accesso: ${idrante.isH24 ? "H24" : "Privato"}
-- Stato: ${idrante.stato}
-- Attacchi: $attacchiStr$mezziStr$notaStr$modStr
+🚨 *PUNTO IDRICO AIB*
+📍 Codice: ${idrante.codice} (${idrante.tipo})
+📌 Ubicazione: ${idrante.ubicazione}
+🔑 Accesso: ${idrante.isH24 ? "H24" : "Privato"}
+🟢 Stato: ${idrante.stato}
+⚙️ Attacchi: $attacchiStr$mezziStr$notaStr$modStr
 
-- WGS84: $latGMS - $lngGMS
-- UTM: $utmStr
-- Mappa: https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.longitudine}
+🌐 WGS84: $latGMS - $lngGMS
+📐 UTM: $utmStr
+🗺️ Mappa: https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.longitudine}
 ''';
 
     final Uri whatsappDirectUri = Uri.parse('whatsapp://send?text=${Uri.encodeComponent(testo)}');
