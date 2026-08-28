@@ -11,7 +11,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:flutter_compass/flutter_compass.dart';
+import 'package:sensors_plus/sensors_plus.dart';
 
 const String supabaseUrl = 'https://srielrbjejggxvpeshfd.supabase.co';
 const String supabaseApiKey =
@@ -381,7 +381,7 @@ class _HomePageState extends State<HomePage> {
           posizioneCorrenteLat = position.latitude;
           posizioneCorrenteLng = position.longitude;
         });
-        // Quando si preme il GPS, riportiamo la mappa al centro e azzeriamo la rotazione (Nord in alto)
+        // Riporta al centro e resetta orientamento al Nord (0°)
         _mapController.move(LatLng(posizioneCorrenteLat, posizioneCorrenteLng), 14.5);
         _mapController.rotate(0.0);
         _mostraMessaggio('Posizione GPS aggiornata e orientata al Nord!');
@@ -1150,7 +1150,7 @@ class _HomePageState extends State<HomePage> {
                 ],
               ),
             ),
-            // MAPPA STANDARD CON BUSSOLA COLLEGATA AI SENSORI DEL TELEFONO
+            // MAPPA STANDARD CON BUSSOLA BASATA SU SENSORS_PLUS
             SizedBox(
               height: 250,
               child: Stack(
@@ -1192,7 +1192,7 @@ class _HomePageState extends State<HomePage> {
                       ),
                     ],
                   ),
-                  // BUSSOLA COLLEGATA AI SENSORI FISICI NELL'ANGOLO SUPERIORE SINISTRO
+                  // BUSSOLA NELL'ANGOLO SUPERIORE SINISTRO
                   Positioned(
                     left: 10,
                     top: 10,
@@ -1489,7 +1489,7 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-// WIDGET BUSSOLA COLLEGATA AI SENSORI FISICI DEL TELEFONO
+// WIDGET BUSSOLA BASATO SU SENSORS_PLUS
 class WidgetBussolaSensori extends StatefulWidget {
   final MapController mapController;
   const WidgetBussolaSensori({super.key, required this.mapController});
@@ -1500,6 +1500,7 @@ class WidgetBussolaSensori extends StatefulWidget {
 
 class _WidgetBussolaSensoriState extends State<WidgetBussolaSensori> {
   bool _bussolaAttiva = true;
+  double _heading = 0.0;
 
   String _getDirezioneCardinale(double gradi) {
     if (gradi >= 337.5 || gradi < 22.5) return 'N (Nord)';
@@ -1515,16 +1516,21 @@ class _WidgetBussolaSensoriState extends State<WidgetBussolaSensori> {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<CompassEvent>(
-      stream: FlutterCompass.events,
+    return StreamBuilder<MagnetometerEvent>(
+      stream: magnetometerEventStream(),
       builder: (context, snapshot) {
-        // Legge l'orientamento reale del telefono in gradi (0-360)
-        double heading = snapshot.data?.heading ?? 0.0;
-        double normalizedHeading = (heading % 360 + 360) % 360;
+        if (snapshot.hasData) {
+          double x = snapshot.data!.x;
+          double y = snapshot.data!.y;
+          double heading = atan2(y, x) * (180 / pi);
+          if (heading < 0) heading += 360;
+          _heading = heading;
+        }
+
+        double normalizedHeading = (_heading % 360 + 360) % 360;
         String cardinale = _getDirezioneCardinale(normalizedHeading);
 
-        // Se la bussola è attiva, ruotiamo la mappa in base al movimento del telefono
-        if (_bussolaAttiva && snapshot.hasData && snapshot.data?.heading != null) {
+        if (_bussolaAttiva && snapshot.hasData) {
           try {
             widget.mapController.rotate(-normalizedHeading);
           } catch (_) {}
@@ -1539,7 +1545,7 @@ class _WidgetBussolaSensoriState extends State<WidgetBussolaSensori> {
                 setState(() {
                   _bussolaAttiva = !_bussolaAttiva;
                   if (!_bussolaAttiva) {
-                    widget.mapController.rotate(0.0); // Riporta a Nord quando disattivata
+                    widget.mapController.rotate(0.0);
                   }
                 });
               },
