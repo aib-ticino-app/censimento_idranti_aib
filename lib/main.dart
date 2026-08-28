@@ -596,43 +596,43 @@ class _HomePageState extends State<HomePage> {
     if (idrante.hasUni70) attacchi.add('UNI 70');
     String attacchiStr = attacchi.isNotEmpty ? attacchi.join(', ') : 'Nessuno';
 
-    // VERSIONE WEB (con emoji formattate pulite)
-    String notaStrWeb = idrante.note.isNotEmpty ? '\n📝 Note: ${idrante.note}' : '';
-    String mezziStrWeb = idrante.mezziCompatibili.isNotEmpty ? '\n🚒 Mezzi: ${idrante.mezziCompatibili.join(', ')}' : '';
-    String modStrWeb = idrante.modificatoDa.isNotEmpty ? '\n👤 Modifica: ${idrante.modificatoDa}' : '';
+    // VERSIONE WEB (con i trattini puliti e senza emoji che danno problemi sui browser desktop)
+    String notaStrWeb = idrante.note.isNotEmpty ? '\n- Note: ${idrante.note}' : '';
+    String mezziStrWeb = idrante.mezziCompatibili.isNotEmpty ? '\n- Mezzi: ${idrante.mezziCompatibili.join(', ')}' : '';
+    String modStrWeb = idrante.modificatoDa.isNotEmpty ? '\n- Modifica: ${idrante.modificatoDa}' : '';
 
     String testoWeb = '''
-🚨 *PUNTO IDRICO AIB*
-📍 Codice: ${idrante.codice} (${idrante.tipo})
-📌 Ubicazione: ${idrante.ubicazione}
-🔑 Accesso: ${idrante.isH24 ? "H24" : "Privato"}
-🟢 Stato: ${idrante.stato}
-⚙️ Attacchi: $attacchiStr$mezziStrWeb$notaStrWeb$modStrWeb
-
-🌐 WGS84: $latGMS - $lngGMS
-📐 UTM: $utmStr
-🗺️ Mappa: https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.longitudine}
-''';
-
-    // VERSIONE MOBILE APP (testo pulito con trattini, sicuro al 100% per non fallire mai l'intent e aprire sempre WhatsApp o appunti)
-    String notaStrApp = idrante.note.isNotEmpty ? '\n- Note: ${idrante.note}' : '';
-    String mezziStrApp = idrante.mezziCompatibili.isNotEmpty ? '\n- Mezzi: ${idrante.mezziCompatibili.join(', ')}' : '';
-    String modStrApp = idrante.modificatoDa.isNotEmpty ? '\n- Modifica: ${idrante.modificatoDa}' : '';
-
-    String testoApp = '''
 *PUNTO IDRICO AIB*
 - Codice: ${idrante.codice} (${idrante.tipo})
 - Ubicazione: ${idrante.ubicazione}
 - Accesso: ${idrante.isH24 ? "H24" : "Privato"}
 - Stato: ${idrante.stato}
-- Attacchi: $attacchiStr$mezziStrApp$notaStrApp$modStrApp
+- Attacchi: $attacchiStr$mezziStrWeb$notaStrWeb$modStrWeb
 
 - WGS84: $latGMS - $lngGMS
 - UTM: $utmStr
 - Mappa: https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.longitudine}
 ''';
 
-    // Scegliamo quale testo e quale modalità usare in base a kIsWeb
+    // VERSIONE MOBILE APP (con le emoji colorate e brillanti, supportate nativamente da Android)
+    String notaStrApp = idrante.note.isNotEmpty ? '\n📝 Note: ${idrante.note}' : '';
+    String mezziStrApp = idrante.mezziCompatibili.isNotEmpty ? '\n🚒 Mezzi: ${idrante.mezziCompatibili.join(', ')}' : '';
+    String modStrApp = idrante.modificatoDa.isNotEmpty ? '\n👤 Modifica: ${idrante.modificatoDa}' : '';
+
+    String testoApp = '''
+🚨 *PUNTO IDRICO AIB*
+📍 Codice: ${idrante.codice} (${idrante.tipo})
+📌 Ubicazione: ${idrante.ubicazione}
+🔑 Accesso: ${idrante.isH24 ? "H24" : "Privato"}
+🟢 Stato: ${idrante.stato}
+⚙️ Attacchi: $attacchiStr$mezziStrApp$notaStrApp$modStrApp
+
+🌐 WGS84: $latGMS - $lngGMS
+📐 UTM: $utmStr
+🗺️ Mappa: https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.longitudine}
+''';
+
+    // Se siamo sul web usiamo i trattini (testoWeb), se siamo su app mobile usiamo le emoji (testoApp)
     String testoFinale = kIsWeb ? testoWeb : testoApp;
 
     final Uri whatsappWebUri = Uri.parse('https://wa.me/?text=${Uri.encodeComponent(testoFinale)}');
@@ -642,7 +642,6 @@ class _HomePageState extends State<HomePage> {
       if (kIsWeb) {
         await launchUrl(whatsappWebUri, mode: LaunchMode.externalApplication);
       } else {
-        // Su mobile proviamo l'apertura diretta di WhatsApp, se fallisce copiamo negli appunti
         if (await canLaunchUrl(whatsappDirectUri)) {
           await launchUrl(whatsappDirectUri, mode: LaunchMode.externalApplication);
         } else {
@@ -942,7 +941,6 @@ class _HomePageState extends State<HomePage> {
                           },
                         ),
                       const SizedBox(width: 4),
-                      // Dropdown ridotto a 105 di larghezza e testo più piccolo per non sbordare mai su cellulare
                       SizedBox(
                         width: 105,
                         child: DropdownButtonFormField<String>(

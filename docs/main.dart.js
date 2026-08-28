@@ -47249,15 +47249,15 @@ if(a3.x)a1.push("UNI 45")
 if(a3.y)a1.push("UNI 70")
 l=a1.length!==0?B.b.ba(a1,", "):"Nessuno"
 k=a3.Q
-j=k.length!==0?"\n\ud83d\udcdd Note: "+k:""
+j=k.length!==0?"\n- Note: "+k:""
 k=a3.w
-i=k.length!==0?"\n\ud83d\ude92 Mezzi: "+B.b.ba(k,", "):""
+i=k.length!==0?"\n- Mezzi: "+B.b.ba(k,", "):""
 h=a3.at
-g=h.length!==0?"\n\ud83d\udc64 Modifica: "+h:""
+g=h.length!==0?"\n- Modifica: "+h:""
 h=a3.z?"H24":"Privato"
 f=a3.e
 if(k.length!==0)B.b.ba(k,", ")
-n="\ud83d\udea8 *PUNTO IDRICO AIB*\n\ud83d\udccd Codice: "+a3.b+" ("+a3.c+")\n\ud83d\udccc Ubicazione: "+a3.d+"\n\ud83d\udd11 Accesso: "+h+"\n\ud83d\udfe2 Stato: "+f+"\n\u2699\ufe0f Attacchi: "+l+i+j+g+"\n\n\ud83c\udf10 WGS84: "+c+" - "+a+"\n\ud83d\udcd0 UTM: "+a0+"\n\ud83d\uddfa\ufe0f Mappa: https://www.google.com/maps/search/?api=1&query="+A.j(d)+","+A.j(b)+"\n"
+n="*PUNTO IDRICO AIB*\n- Codice: "+a3.b+" ("+a3.c+")\n- Ubicazione: "+a3.d+"\n- Accesso: "+h+"\n- Stato: "+f+"\n- Attacchi: "+l+i+j+g+"\n\n- WGS84: "+c+" - "+a+"\n- UTM: "+a0+"\n- Mappa: https://www.google.com/maps/search/?api=1&query="+A.j(d)+","+A.j(b)+"\n"
 m=A.cy("https://wa.me/?text="+A.ph(2,n,B.R,!1),0,null)
 A.cy("whatsapp://send?text="+A.ph(2,n,B.R,!1),0,null)
 q=3
