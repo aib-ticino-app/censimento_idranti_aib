@@ -373,7 +373,7 @@ class _HomePageState extends State<HomePage> {
 
     try {
       Position position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+        desiredAccuracy: LocationAccuracy.high,
       );
 
       if (mounted) {
@@ -381,7 +381,6 @@ class _HomePageState extends State<HomePage> {
           posizioneCorrenteLat = position.latitude;
           posizioneCorrenteLng = position.longitude;
         });
-        // Riporta al centro e resetta orientamento al Nord (0°)
         _mapController.move(LatLng(posizioneCorrenteLat, posizioneCorrenteLng), 14.5);
         _mapController.rotate(0.0);
         _mostraMessaggio('Posizione GPS aggiornata e orientata al Nord!');
