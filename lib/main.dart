@@ -586,7 +586,6 @@ class _HomePageState extends State<HomePage> {
     return '32$banda ${easting.toStringAsFixed(0)} E, ${northing.toStringAsFixed(0)} N';
   }
 
-  // CONDIVISIONE CORRETTA PER APK E WEB
   void _condividiPuntoIdrico(PuntoIdrico idrante) async {
     String latGMS = _convertiInWGS84GMS(idrante.latitudine, true);
     String lngGMS = _convertiInWGS84GMS(idrante.longitudine, false);
@@ -640,7 +639,6 @@ class _HomePageState extends State<HomePage> {
       if (kIsWeb) {
         await launchUrl(whatsappWebUri, mode: LaunchMode.externalApplication);
       } else {
-        // Tenta l'apertura diretta di WhatsApp o di un app di messaggistica esterna
         if (await canLaunchUrl(whatsappDirectUri)) {
           await launchUrl(whatsappDirectUri, mode: LaunchMode.externalApplication);
         } else {
@@ -1487,10 +1485,10 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-// WIDGET BUSSOLA DIGITALE (ROSSA = NORD, GRIGIA = SUD, TOCCO = RESETTA ORIENTAMENTO)
+// WIDGET BUSSOLA DIGITALE CORRETTO (required this.mapController)
 class WidgetBussolaDigitale extends StatelessWidget {
   final MapController mapController;
-  const WidgetBussolaDigitale({super.key, required.this.mapController});
+  const WidgetBussolaDigitale({super.key, required this.mapController});
 
   @override
   Widget build(BuildContext context) {
@@ -1517,7 +1515,6 @@ class WidgetBussolaDigitale extends StatelessWidget {
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  // Punta freccia SUD (Grigia/Nera)
                   Positioned(
                     bottom: 6,
                     child: Container(
@@ -1529,7 +1526,6 @@ class WidgetBussolaDigitale extends StatelessWidget {
                       ),
                     ),
                   ),
-                  // Punta freccia NORD (Rossa)
                   Positioned(
                     top: 6,
                     child: Container(
@@ -1541,7 +1537,6 @@ class WidgetBussolaDigitale extends StatelessWidget {
                       ),
                     ),
                   ),
-                  // Centro della bussola
                   Container(
                     width: 6,
                     height: 6,
@@ -1560,7 +1555,6 @@ class WidgetBussolaDigitale extends StatelessWidget {
   }
 }
 
-// PAGINA DEDICATA ALLA MAPPA A TUTTO SCHERMO
 class MappaFullscreenPage extends StatelessWidget {
   final List<PuntoIdrico> listaIdranti;
   final double posizioneLat;
