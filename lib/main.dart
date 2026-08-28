@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:math';
+import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -1594,7 +1595,7 @@ class _LancettaBussolaPainter extends CustomPainter {
   _LancettaBussolaPainter({required this.attiva});
 
   @override
-  void paint(Canvas canvas, Size size) {
+  void paint(ui.Canvas canvas, ui.Size size) {
     final paintNord = Paint()
       ..color = attiva ? Colors.red[700]! : Colors.grey[600]!
       ..style = PaintingStyle.fill;
@@ -1613,14 +1614,14 @@ class _LancettaBussolaPainter extends CustomPainter {
     final center = Offset(w / 2, h / 2);
 
     // Triangolo Nord (Puntatore Rosso)
-    final pathNord = Path()
+    final pathNord = ui.Path()
       ..moveTo(center.dx, 2)
       ..lineTo(center.dx + 5, center.dy)
       ..lineTo(center.dx - 5, center.dy)
       ..close();
 
     // Triangolo Sud (Puntatore Bianco/Grigio)
-    final pathSud = Path()
+    final pathSud = ui.Path()
       ..moveTo(center.dx, h - 2)
       ..lineTo(center.dx + 5, center.dy)
       ..lineTo(center.dx - 5, center.dy)
