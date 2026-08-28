@@ -1146,9 +1146,9 @@ class _HomePageState extends State<HomePage> {
                 ],
               ),
             ),
-            // MAPPA STANDARD CON BUSSOLA PROFESSIONALE ATTIVABILE/DISATTIVABILE
+            // MAPPA STANDARD CON BUSSOLA CLASSICA E BARRA GRADI
             SizedBox(
-              height: 240,
+              height: 250,
               child: Stack(
                 children: [
                   FlutterMap(
@@ -1188,11 +1188,11 @@ class _HomePageState extends State<HomePage> {
                       ),
                     ],
                   ),
-                  // BUSSOLA PROFESSIONALE NELL'ANGOLO SUPERIORE SINISTRO
+                  // BUSSOLA CLASSICA CON QUADRANTE NELL'ANGOLO SUPERIORE SINISTRO
                   Positioned(
                     left: 10,
                     top: 10,
-                    child: WidgetBussolaProfessionale(mapController: _mapController),
+                    child: WidgetBussolaClassica(mapController: _mapController),
                   ),
                   // PULSANTE FULLSCREEN NELL'ANGOLO SUPERIORE DESTRO
                   Positioned(
@@ -1485,115 +1485,158 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-// WIDGET BUSSOLA PROFESSIONALE (ATTIVABILE / DISATTIVABILE CON UN TOCCO)
-class WidgetBussolaProfessionale extends StatefulWidget {
+// WIDGET BUSSOLA CLASSICA CON QUADRANTE ANALOGICO, GRADI E BARRA INFORMATIVA
+class WidgetBussolaClassica extends StatefulWidget {
   final MapController mapController;
-  const WidgetBussolaProfessionale({super.key, required this.mapController});
+  const WidgetBussolaClassica({super.key, required this.mapController});
 
   @override
-  State<WidgetBussolaProfessionale> createState() => _WidgetBussolaProfessionaleState();
+  State<WidgetBussolaClassica> createState() => _WidgetBussolaClassicaState();
 }
 
-class _WidgetBussolaProfessionaleState extends State<WidgetBussolaProfessionale> {
+class _WidgetBussolaClassicaState extends State<WidgetBussolaClassica> {
   bool _bussolaAttiva = true;
+
+  String _getDirezioneCardinale(double gradi) {
+    if (gradi >= 337.5 || gradi < 22.5) return 'N (Nord)';
+    if (gradi >= 22.5 && gradi < 67.5) return 'NE (Nord-Est)';
+    if (gradi >= 67.5 && gradi < 112.5) return 'E (Est)';
+    if (gradi >= 112.5 && gradi < 157.5) return 'SE (Sud-Est)';
+    if (gradi >= 157.5 && gradi < 202.5) return 'S (Sud)';
+    if (gradi >= 202.5 && gradi < 247.5) return 'SW (Sud-Ovest)';
+    if (gradi >= 247.5 && gradi < 292.5) return 'W (Ovest)';
+    if (gradi >= 292.5 && gradi < 337.5) return 'NW (Nord-Ovest)';
+    return 'N';
+  }
 
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<void>(
       stream: widget.mapController.mapEventStream,
       builder: (context, snapshot) {
-        double rotation = _bussolaAttiva ? widget.mapController.camera.rotation : 0.0;
+        double rawRotation = widget.mapController.camera.rotation;
+        double normalizedRotation = (rawRotation % 360 + 360) % 360;
+        double displayRotation = _bussolaAttiva ? rawRotation : 0.0;
+        String cardinale = _getDirezioneCardinale(normalizedRotation);
 
-        return GestureDetector(
-          onTap: () {
-            setState(() {
-              _bussolaAttiva = !_bussolaAttiva;
-              if (_bussolaAttiva) {
-                widget.mapController.rotate(0);
-              }
-            });
-          },
-          child: Tooltip(
-            message: _bussolaAttiva ? 'Bussola Attiva (Tocca per disattivare)' : 'Bussola Disattivata (Tocca per attivare)',
-            child: Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: _bussolaAttiva ? Colors.white.withOpacity(0.95) : Colors.grey[300]!.withOpacity(0.8),
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: _bussolaAttiva ? Colors.blue[800]! : Colors.grey[600]!,
-                  width: 2,
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Icona bussola analogica classica
+            GestureDetector(
+              onTap: () {
+                setState(() {
+                  _bussolaAttiva = !_bussolaAttiva;
+                  if (_bussolaAttiva) {
+                    widget.mapController.rotate(0);
+                  }
+                });
+              },
+              child: Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: _bussolaAttiva ? Colors.white.withOpacity(0.95) : Colors.grey[300]!.withOpacity(0.8),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: _bussolaAttiva ? Colors.blue[800]! : Colors.grey[600]!,
+                    width: 2.5,
+                  ),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 6, offset: const Offset(0, 3)),
+                  ],
                 ),
-                boxShadow: [
-                  BoxShadow(color: Colors.black.withOpacity(0.25), blurRadius: 6, offset: const Offset(0, 3)),
-                ],
-              ),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  // Lettera 'N' fissa o rotante in alto
-                  Positioned(
-                    top: 3,
-                    child: Text(
-                      'N',
-                      style: TextStyle(
-                        fontSize: 9,
-                        fontWeight: FontWeight.bold,
-                        color: _bussolaAttiva ? Colors.red[700] : Colors.grey[600],
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    // Tacche cardinali fisse di sfondo (N, E, S, W)
+                    const Positioned(top: 4, child: Text('N', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Colors.red))),
+                    const Positioned(bottom: 4, child: Text('S', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Colors.grey))),
+                    const Positioned(right: 5, child: Text('E', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Colors.grey))),
+                    const Positioned(left: 5, child: Text('W', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Colors.grey))),
+                    
+                    // Lancetta della bussola rotante
+                    Transform.rotate(
+                      angle: displayRotation * (pi / 180),
+                      child: CustomPaint(
+                        size: const Size(32, 32),
+                        painter: _LancettaBussolaPainter(attiva: _bussolaAttiva),
                       ),
                     ),
-                  ),
-                  // Freccia direzionale professionale
-                  Transform.rotate(
-                    angle: rotation * (pi / 180),
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        // Punta Sud (Grigia)
-                        Positioned(
-                          bottom: 8,
-                          child: Container(
-                            width: 3,
-                            height: 10,
-                            decoration: BoxDecoration(
-                              color: _bussolaAttiva ? Colors.grey[700] : Colors.grey[500],
-                              borderRadius: BorderRadius.circular(1),
-                            ),
-                          ),
-                        ),
-                        // Punta Nord (Rossa)
-                        Positioned(
-                          top: 8,
-                          child: Container(
-                            width: 3,
-                            height: 10,
-                            decoration: BoxDecoration(
-                              color: _bussolaAttiva ? Colors.red[700] : Colors.grey[500],
-                              borderRadius: BorderRadius.circular(1),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Perno centrale
-                  Container(
-                    width: 5,
-                    height: 5,
-                    decoration: BoxDecoration(
-                      color: _bussolaAttiva ? Colors.blue[900] : Colors.grey[600],
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
+            const SizedBox(height: 4),
+            // Barra dei gradi e orientamento
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.black54,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                '${normalizedRotation.toStringAsFixed(0)}° - $cardinale',
+                style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
         );
       },
     );
   }
+}
+
+// PAINTER PER LANCETTA ROSSA E BIANCA/GRIGIA STILE BUSSOLA TRADIZIONALE
+class _LancettaBussolaPainter extends CustomPainter {
+  final bool attiva;
+  _LancettaBussolaPainter({required this.attiva});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paintNord = Paint()
+      ..color = attiva ? Colors.red[700]! : Colors.grey[600]!
+      ..style = PaintingStyle.fill;
+
+    final paintSud = Paint()
+      ..color = attiva ? Colors.white : Colors.grey[400]!
+      ..style = PaintingStyle.fill;
+
+    final paintBordo = Paint()
+      ..color = Colors.black45
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 0.5;
+
+    final double w = size.width;
+    final double h = size.height;
+    final center = Offset(w / 2, h / 2);
+
+    // Triangolo Nord (Puntatore Rosso)
+    final pathNord = Path()
+      ..moveTo(center.dx, 2)
+      ..lineTo(center.dx + 5, center.dy)
+      ..lineTo(center.dx - 5, center.dy)
+      ..close();
+
+    // Triangolo Sud (Puntatore Bianco/Grigio)
+    final pathSud = Path()
+      ..moveTo(center.dx, h - 2)
+      ..lineTo(center.dx + 5, center.dy)
+      ..lineTo(center.dx - 5, center.dy)
+      ..close();
+
+    canvas.drawPath(pathNord, paintNord);
+    canvas.drawPath(pathNord, paintBordo);
+    canvas.drawPath(pathSud, paintSud);
+    canvas.drawPath(pathSud, paintBordo);
+
+    // Perno centrale
+    canvas.drawCircle(center, 2.5, Paint()..color = Colors.black87);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }
 
 // PAGINA DEDICATA ALLA MAPPA A TUTTO SCHERMO
@@ -1686,7 +1729,7 @@ class MappaFullscreenPage extends StatelessWidget {
           Positioned(
             left: 15,
             top: 15,
-            child: WidgetBussolaProfessionale(mapController: fullscreenMapController),
+            child: WidgetBussolaClassica(mapController: fullscreenMapController),
           ),
         ],
       ),
