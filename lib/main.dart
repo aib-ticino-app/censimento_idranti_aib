@@ -292,6 +292,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  // Impostazioni iniziali di default (ogniqualvolta si fa refresh o si rientra)
   String _filtroSelezionato = 'Tutti';
   bool _usaMappaTopografica = false;
 
@@ -1099,95 +1100,95 @@ class _HomePageState extends State<HomePage> {
           const SizedBox(width: 4),
         ],
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (_caricamentoCloud) const LinearProgressIndicator(color: Colors.orange),
-            Container(
-              height: 36,
-              color: Colors.blue[900],
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('Mappa AIB', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
-                  Text('GPS: ${posizioneCorrenteLat.toStringAsFixed(4)}, ${posizioneCorrenteLng.toStringAsFixed(4)}',
-                      style: const TextStyle(color: Colors.white70, fontSize: 11)),
-                ],
-              ),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (_caricamentoCloud) const LinearProgressIndicator(color: Colors.orange),
+          Container(
+            height: 32,
+            color: Colors.blue[900],
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Mappa AIB', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
+                Text('GPS: ${posizioneCorrenteLat.toStringAsFixed(4)}, ${posizioneCorrenteLng.toStringAsFixed(4)}',
+                    style: const TextStyle(color: Colors.white70, fontSize: 11)),
+              ],
             ),
-            SizedBox(
-              height: 240,
-              child: FlutterMap(
-                mapController: _mapController,
-                options: MapOptions(initialCenter: LatLng(posizioneCorrenteLat, posizioneCorrenteLng), initialZoom: 13.5),
-                children: [
-                  TileLayer(
-                    urlTemplate: _usaMappaTopografica
-                        ? 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png'
-                        : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                    subdomains: _usaMappaTopografica ? const ['a', 'b', 'c'] : const [],
-                    userAgentPackageName: 'com.example.idranti_aib',
-                    maxZoom: 17,
-                  ),
-                  MarkerLayer(
-                    markers: [
-                      Marker(
-                        point: LatLng(posizioneCorrenteLat, posizioneCorrenteLng),
-                        child: const Icon(Icons.navigation, color: Colors.blueAccent, size: 30),
-                      ),
-                      ...idrantiMostrati.map((idrante) {
-                        return Marker(
-                          point: LatLng(idrante.latitudine, idrante.longitudine),
-                          child: GestureDetector(
-                            onTap: () => _mostraDettaglioIdrante(idrante, _calcolaDistanzaKm(posizioneCorrenteLat, posizioneCorrenteLng, idrante.latitudine, idrante.longitudine)),
-                            child: CircleAvatar(
-                              backgroundColor: _getColoreStato(idrante.stato),
-                              child: _buildIconaSimbolo(idrante, size: 18),
-                            ),
+          ),
+          // MAPPA AMPLIATA: altezza portata a 310 pixel per dare molta più visuale
+          SizedBox(
+            height: 310,
+            child: FlutterMap(
+              mapController: _mapController,
+              options: MapOptions(initialCenter: LatLng(posizioneCorrenteLat, posizioneCorrenteLng), initialZoom: 13.5),
+              children: [
+                TileLayer(
+                  urlTemplate: _usaMappaTopografica
+                      ? 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png'
+                      : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  subdomains: _usaMappaTopografica ? const ['a', 'b', 'c'] : const [],
+                  userAgentPackageName: 'com.example.idranti_aib',
+                  maxZoom: 17,
+                ),
+                MarkerLayer(
+                  markers: [
+                    Marker(
+                      point: LatLng(posizioneCorrenteLat, posizioneCorrenteLng),
+                      child: const Icon(Icons.navigation, color: Colors.blueAccent, size: 30),
+                    ),
+                    ...idrantiMostrati.map((idrante) {
+                      return Marker(
+                        point: LatLng(idrante.latitudine, idrante.longitudine),
+                        child: GestureDetector(
+                          onTap: () => _mostraDettaglioIdrante(idrante, _calcolaDistanzaKm(posizioneCorrenteLat, posizioneCorrenteLng, idrante.latitudine, idrante.longitudine)),
+                          child: CircleAvatar(
+                            backgroundColor: _getColoreStato(idrante.stato),
+                            child: _buildIconaSimbolo(idrante, size: 18),
                           ),
-                        );
-                      }),
-                    ],
-                  ),
-                ],
-              ),
+                        ),
+                      );
+                    }),
+                  ],
+                ),
+              ],
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Punti Censiti (${listaIdranti.length})', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                  ElevatedButton.icon(
-                    onPressed: _mostraDialogoNuovoIdrante,
-                    icon: const Icon(Icons.add, size: 16),
-                    label: const Text('Idrante'),
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.blue[700], foregroundColor: Colors.white),
-                  ),
-                ],
-              ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Punti Censiti (${listaIdranti.length})', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                ElevatedButton.icon(
+                  onPressed: _mostraDialogoNuovoIdrante,
+                  icon: const Icon(Icons.add, size: 14),
+                  label: const Text('Idrante', style: TextStyle(fontSize: 12)),
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.blue[700], foregroundColor: Colors.white, minimumSize: const Size(0, 32)),
+                ),
+              ],
             ),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 12.0),
-              child: Row(children: [_buildFilterChip('Tutti'), _buildFilterChip('Idranti'), _buildFilterChip('Vasche'), _buildFilterChip('Prese d\'Acqua')]),
-            ),
-            const SizedBox(height: 6),
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
+          ),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 12.0),
+            child: Row(children: [_buildFilterChip('Tutti'), _buildFilterChip('Idranti'), _buildFilterChip('Vasche'), _buildFilterChip('Prese d\'Acqua')]),
+          ),
+          const SizedBox(height: 4),
+          // LISTA ABASSATA E SCORRIBILE: usa Expanded per occupare lo spazio rimanente in basso
+          Expanded(
+            child: ListView.builder(
               itemCount: idrantiMostrati.length,
               itemBuilder: (ctx, index) {
                 final idrante = idrantiMostrati[index];
                 double dist = _calcolaDistanzaKm(posizioneCorrenteLat, posizioneCorrenteLng, idrante.latitudine, idrante.longitudine);
                 return Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                   child: InkWell(
                     onTap: () => _mostraDettaglioIdrante(idrante, dist),
                     child: Padding(
-                      padding: const EdgeInsets.all(10.0),
+                      padding: const EdgeInsets.all(8.0),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -1200,9 +1201,9 @@ class _HomePageState extends State<HomePage> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('${idrante.codice} - ${idrante.tipo}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                                Text('${idrante.ubicazione} (${idrante.isH24 ? "H24" : "Privato"})', style: const TextStyle(fontSize: 12)),
-                                const SizedBox(height: 4),
+                                Text('${idrante.codice} - ${idrante.tipo}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                Text('${idrante.ubicazione} (${idrante.isH24 ? "H24" : "Privato"})', style: const TextStyle(fontSize: 11)),
+                                const SizedBox(height: 2),
                                 Row(
                                   children: [
                                     _buildBadgeAttacco('UNI 45', idrante.hasUni45),
@@ -1213,27 +1214,27 @@ class _HomePageState extends State<HomePage> {
                                   ],
                                 ),
                                 if (idrante.mezziCompatibili.isNotEmpty)
-                                  Text('Mezzi: ${idrante.mezziCompatibili.join(', ')}', style: const TextStyle(fontSize: 11, color: Colors.blueGrey)),
+                                  Text('Mezzi: ${idrante.mezziCompatibili.join(', ')}', style: const TextStyle(fontSize: 10, color: Colors.blueGrey)),
                                 if (idrante.note.isNotEmpty)
-                                  Text('Note: ${idrante.note}', style: TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: Colors.amber[900])),
+                                  Text('Note: ${idrante.note}', style: TextStyle(fontSize: 10, fontStyle: FontStyle.italic, color: Colors.amber[900])),
                                 if (idrante.modificatoDa.isNotEmpty)
-                                  Text('Modificato da: ${idrante.modificatoDa}', style: const TextStyle(fontSize: 10, color: Colors.grey)),
-                                const SizedBox(height: 6),
+                                  Text('Modificato da: ${idrante.modificatoDa}', style: const TextStyle(fontSize: 9, color: Colors.grey)),
+                                const SizedBox(height: 4),
                                 Row(
                                   children: [
                                     if (possoModificareEEliminare)
                                       InkWell(
                                         onTap: () => _mostraDialogoModificaIdrante(idrante),
-                                        child: const Padding(padding: EdgeInsets.only(right: 12.0), child: Icon(Icons.edit, size: 20, color: Colors.orange)),
+                                        child: const Padding(padding: EdgeInsets.only(right: 12.0), child: Icon(Icons.edit, size: 18, color: Colors.orange)),
                                       ),
                                     if (possoModificareEEliminare)
                                       InkWell(
                                         onTap: () => _confermaEliminazioneIdrante(idrante),
-                                        child: const Padding(padding: EdgeInsets.only(right: 12.0), child: Icon(Icons.delete, size: 20, color: Colors.red)),
+                                        child: const Padding(padding: EdgeInsets.only(right: 12.0), child: Icon(Icons.delete, size: 18, color: Colors.red)),
                                       ),
                                     PopupMenuButton<String>(
                                       padding: EdgeInsets.zero,
-                                      icon: const Icon(Icons.build_circle, size: 20, color: Colors.blueGrey),
+                                      icon: const Icon(Icons.build_circle, size: 18, color: Colors.blueGrey),
                                       onSelected: (st) => _cambiaStatoIdrante(idrante, st),
                                       itemBuilder: (_) => [
                                         const PopupMenuItem(value: 'Funzionante', child: Text('Funzionante')),
@@ -1243,7 +1244,7 @@ class _HomePageState extends State<HomePage> {
                                     ),
                                     InkWell(
                                       onTap: () => _condividiPuntoIdrico(idrante),
-                                      child: const Padding(padding: EdgeInsets.symmetric(horizontal: 8.0), child: Icon(Icons.share, size: 20, color: Colors.green)),
+                                      child: const Padding(padding: EdgeInsets.symmetric(horizontal: 8.0), child: Icon(Icons.share, size: 18, color: Colors.green)),
                                     ),
                                   ],
                                 ),
@@ -1257,8 +1258,8 @@ class _HomePageState extends State<HomePage> {
                 );
               },
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
