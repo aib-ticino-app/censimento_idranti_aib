@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:math';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -595,44 +596,62 @@ class _HomePageState extends State<HomePage> {
     if (idrante.hasUni70) attacchi.add('UNI 70');
     String attacchiStr = attacchi.isNotEmpty ? attacchi.join(', ') : 'Nessuno';
 
-    String notaStr = idrante.note.isNotEmpty ? '\n📝 *Note:* ${idrante.note}' : '';
-    String mezziStr = idrante.mezziCompatibili.isNotEmpty ? '\n🚒 *Mezzi:* ${idrante.mezziCompatibili.join(', ')}' : '';
-    String modStr = idrante.modificatoDa.isNotEmpty ? '\n👤 *Ultima modifica:* ${idrante.modificatoDa}' : '';
+    // VERSIONE WEB (con emoji formattate pulite)
+    String notaStrWeb = idrante.note.isNotEmpty ? '\n📝 Note: ${idrante.note}' : '';
+    String mezziStrWeb = idrante.mezziCompatibili.isNotEmpty ? '\n🚒 Mezzi: ${idrante.mezziCompatibili.join(', ')}' : '';
+    String modStrWeb = idrante.modificatoDa.isNotEmpty ? '\n👤 Modifica: ${idrante.modificatoDa}' : '';
 
-    // Messaggio ottimizzato per massima leggibilità a colpo d'occhio
-    String testo = '''
-🚨 *PUNTO IDRICO AIB* 🚨
-📍 *Codice:* ${idrante.codice} (${idrante.tipo})
-📌 *Ubicazione:* ${idrante.ubicazione}
-🔑 *Accesso:* ${idrante.isH24 ? "H24 (Pubblico)" : "Privato"}
-🟢 *Stato:* ${idrante.stato}
-⚙️ *Attacchi:* $attacchiStr$mezziStr$notaStr$modStr
+    String testoWeb = '''
+🚨 *PUNTO IDRICO AIB*
+📍 Codice: ${idrante.codice} (${idrante.tipo})
+📌 Ubicazione: ${idrante.ubicazione}
+🔑 Accesso: ${idrante.isH24 ? "H24" : "Privato"}
+🟢 Stato: ${idrante.stato}
+⚙️ Attacchi: $attacchiStr$mezziStrWeb$notaStrWeb$modStrWeb
 
-🌐 *WGS84:* $latGMS - $lngGMS
-📐 *UTM:* $utmStr
-🗺️ *Mappa:* https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.longitudine}
+🌐 WGS84: $latGMS - $lngGMS
+📐 UTM: $utmStr
+🗺️ Mappa: https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.longitudine}
 ''';
 
-    final Uri whatsappWebUri = Uri.parse('https://wa.me/?text=${Uri.encodeComponent(testo)}');
-    final Uri whatsappDirectUri = Uri.parse('whatsapp://send?text=${Uri.encodeComponent(testo)}');
+    // VERSIONE MOBILE APP (testo pulito con trattini, sicuro al 100% per non fallire mai l'intent e aprire sempre WhatsApp o appunti)
+    String notaStrApp = idrante.note.isNotEmpty ? '\n- Note: ${idrante.note}' : '';
+    String mezziStrApp = idrante.mezziCompatibili.isNotEmpty ? '\n- Mezzi: ${idrante.mezziCompatibili.join(', ')}' : '';
+    String modStrApp = idrante.modificatoDa.isNotEmpty ? '\n- Modifica: ${idrante.modificatoDa}' : '';
+
+    String testoApp = '''
+*PUNTO IDRICO AIB*
+- Codice: ${idrante.codice} (${idrante.tipo})
+- Ubicazione: ${idrante.ubicazione}
+- Accesso: ${idrante.isH24 ? "H24" : "Privato"}
+- Stato: ${idrante.stato}
+- Attacchi: $attacchiStr$mezziStrApp$notaStrApp$modStrApp
+
+- WGS84: $latGMS - $lngGMS
+- UTM: $utmStr
+- Mappa: https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.longitudine}
+''';
+
+    // Scegliamo quale testo e quale modalità usare in base a kIsWeb
+    String testoFinale = kIsWeb ? testoWeb : testoApp;
+
+    final Uri whatsappWebUri = Uri.parse('https://wa.me/?text=${Uri.encodeComponent(testoFinale)}');
+    final Uri whatsappDirectUri = Uri.parse('whatsapp://send?text=${Uri.encodeComponent(testoFinale)}');
     
     try {
-      bool isWeb = Uri.base.hasScheme && (Uri.base.scheme == 'http' || Uri.base.scheme == 'https');
-      
-      if (isWeb) {
+      if (kIsWeb) {
         await launchUrl(whatsappWebUri, mode: LaunchMode.externalApplication);
       } else {
+        // Su mobile proviamo l'apertura diretta di WhatsApp, se fallisce copiamo negli appunti
         if (await canLaunchUrl(whatsappDirectUri)) {
           await launchUrl(whatsappDirectUri, mode: LaunchMode.externalApplication);
-        } else if (await canLaunchUrl(whatsappWebUri)) {
-          await launchUrl(whatsappWebUri, mode: LaunchMode.externalApplication);
         } else {
-          await Clipboard.setData(ClipboardData(text: testo));
+          await Clipboard.setData(ClipboardData(text: testoFinale));
           _mostraMessaggio('Copiato negli appunti!');
         }
       }
     } catch (_) {
-      await Clipboard.setData(ClipboardData(text: testo));
+      await Clipboard.setData(ClipboardData(text: testoFinale));
       _mostraMessaggio('Copiato negli appunti!');
     }
   }
@@ -819,7 +838,7 @@ class _HomePageState extends State<HomePage> {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
         decoration: BoxDecoration(color: Colors.purple[800], borderRadius: BorderRadius.circular(4)),
-        child: const Text('🛡️ ADMIN', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+        child: const Text('ADMIN', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
       );
     }
 
@@ -896,7 +915,6 @@ class _HomePageState extends State<HomePage> {
                   padding: const EdgeInsets.symmetric(vertical: 6.0),
                   child: Row(
                     children: [
-                      // Usiamo Expanded così il nome e il distaccamento occupano lo spazio a disposizione senza rompersi a capo verticalmente
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -909,12 +927,11 @@ class _HomePageState extends State<HomePage> {
                           ],
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      // Sezione tasto approvazione rapida se non approvato
+                      const SizedBox(width: 4),
                       if (!u['approvato'])
                         IconButton(
                           icon: const Icon(Icons.check_circle, color: Colors.green),
-                          tooltip: 'Approva utente',
+                          tooltip: 'Approva',
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(),
                           onPressed: () async {
@@ -924,20 +941,21 @@ class _HomePageState extends State<HomePage> {
                             _controllaUtentiDaApprovare();
                           },
                         ),
-                      const SizedBox(width: 8),
-                      // Dropdown del ruolo con larghezza controllata
+                      const SizedBox(width: 4),
+                      // Dropdown ridotto a 105 di larghezza e testo più piccolo per non sbordare mai su cellulare
                       SizedBox(
-                        width: 125,
+                        width: 105,
                         child: DropdownButtonFormField<String>(
                           value: u['ruolo'],
                           isDense: true,
-                          style: const TextStyle(fontSize: 11, color: Colors.black87),
+                          isExpanded: true,
+                          style: const TextStyle(fontSize: 10, color: Colors.black87),
                           decoration: const InputDecoration(
-                            contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            contentPadding: EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                             border: OutlineInputBorder(),
                           ),
                           items: ['OPERATORE', 'CAPOSQUADRA', 'DOS', 'AMMINISTRATORE']
-                              .map((r) => DropdownMenuItem(value: r, child: Text(r, style: const TextStyle(fontSize: 11))))
+                              .map((r) => DropdownMenuItem(value: r, child: Text(r == 'AMMINISTRATORE' ? 'ADMIN' : r, style: const TextStyle(fontSize: 10))))
                               .toList(),
                           onChanged: (nuovoRuolo) async {
                             if (nuovoRuolo != null) {
