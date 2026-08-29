@@ -319,6 +319,8 @@ class _HomePageState extends State<HomePage> {
     'Presa d\'Acqua Naturale',
   ];
 
+  final List<String> portateDisponibili = ['Scarsa', 'Sufficiente', 'Buona'];
+
   List<PuntoIdrico> listaIdranti = [];
 
   final _codiceController = TextEditingController();
@@ -598,6 +600,7 @@ class _HomePageState extends State<HomePage> {
     if (idrante.hasUni45) attacchi.add('UNI 45');
     if (idrante.hasUni70) attacchi.add('UNI 70');
     String attacchiStr = attacchi.isNotEmpty ? attacchi.join(', ') : 'Nessuno';
+    String portataStr = idrante.portata.isNotEmpty ? idrante.portata : 'Non specificata';
 
     String notaStrWeb = idrante.note.isNotEmpty ? '\n- Note: ${idrante.note}' : '';
     String mezziStrWeb = idrante.mezziCompatibili.isNotEmpty ? '\n- Mezzi: ${idrante.mezziCompatibili.join(', ')}' : '';
@@ -609,8 +612,8 @@ class _HomePageState extends State<HomePage> {
 - Ubicazione: ${idrante.ubicazione}
 - Accesso: ${idrante.isH24 ? "H24" : "Privato"}
 - Stato: ${idrante.stato}
+- Portata: $portataStr
 - Attacchi: $attacchiStr$mezziStrWeb$notaStrWeb$modStrWeb
-
 - WGS84: $latGMS - $lngGMS
 - UTM: $utmStr
 - Mappa: https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.longitudine}
@@ -626,8 +629,8 @@ class _HomePageState extends State<HomePage> {
 📌 Ubicazione: ${idrante.ubicazione}
 🔑 Accesso: ${idrante.isH24 ? "H24" : "Privato"}
 🟢 Stato: ${idrante.stato}
+💧 Portata: $portataStr
 ⚙️ Attacchi: $attacchiStr$mezziStrApp$notaStrApp$modStrApp
-
 🌐 WGS84: $latGMS - $lngGMS
 📐 UTM: $utmStr
 🗺️ Mappa: https://www.google.com/maps/search/?api=1&query=${idrante.latitudine},${idrante.longitudine}
@@ -662,6 +665,19 @@ class _HomePageState extends State<HomePage> {
         return Colors.orange[800]!;
       default:
         return Colors.green[700]!;
+    }
+  }
+
+  Color _getColorePortata(String portata) {
+    switch (portata) {
+      case 'Scarsa':
+        return Colors.red;
+      case 'Sufficiente':
+        return Colors.lightBlue;
+      case 'Buona':
+        return Colors.green;
+      default:
+        return Colors.blue;
     }
   }
 
@@ -749,6 +765,8 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(height: 6),
               Text('Stato: ${idrante.stato}', style: TextStyle(fontWeight: FontWeight.bold, color: _getColoreStato(idrante.stato))),
               const SizedBox(height: 6),
+              Text('Portata: ${idrante.portata.isNotEmpty ? idrante.portata : "Non specificata"}', style: TextStyle(fontWeight: FontWeight.bold, color: _getColorePortata(idrante.portata))),
+              const SizedBox(height: 6),
               Text('Accesso: ${idrante.isH24 ? "H24 (Pubblico)" : "Proprietà Privata"}'),
               const SizedBox(height: 6),
               Text('Distanza: ${distanzaKm.toStringAsFixed(2)} km', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
@@ -785,6 +803,14 @@ class _HomePageState extends State<HomePage> {
         ),
         actions: [
           IconButton(icon: const Icon(Icons.share, color: Colors.green), onPressed: () => _condividiPuntoIdrico(idrante), tooltip: 'Condividi su WhatsApp'),
+          TextButton.icon(
+            onPressed: () {
+              Navigator.pop(context);
+              _mostraDialogoModificaIdrante(idrante);
+            },
+            icon: const Icon(Icons.edit, color: Colors.blue),
+            label: const Text('Modifica'),
+          ),
           TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Chiudi')),
           ElevatedButton.icon(
             onPressed: () {
@@ -1265,9 +1291,11 @@ class _HomePageState extends State<HomePage> {
                                     const SizedBox(width: 6),
                                     _buildBadgeAttacco('UNI 70', idrante.hasUni70),
                                     const SizedBox(width: 8),
-                                    Text('Dist: ${dist.toStringAsFixed(2)} km', style: const TextStyle(fontSize: 11)),
+                                    Text('Portata: ${idrante.portata.isNotEmpty ? idrante.portata : "N/D"}', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: _getColorePortata(idrante.portata))),
                                   ],
                                 ),
+                                const SizedBox(height: 2),
+                                Text('Dist: ${dist.toStringAsFixed(2)} km', style: const TextStyle(fontSize: 11)),
                                 if (idrante.mezziCompatibili.isNotEmpty)
                                   Text('Mezzi: ${idrante.mezziCompatibili.join(', ')}', style: const TextStyle(fontSize: 11, color: Colors.blueGrey)),
                                 if (idrante.note.isNotEmpty)
@@ -1325,6 +1353,7 @@ class _HomePageState extends State<HomePage> {
     _ubicazioneController.clear();
     _noteController.clear();
     String tipoSelezionato = tipologieDisponibili.first;
+    String portataSelezionata = 'Sufficiente';
     bool hasUni45 = true;
     bool hasUni70 = true;
     bool isH24 = true;
@@ -1354,6 +1383,22 @@ class _HomePageState extends State<HomePage> {
                     const SizedBox(width: 8),
                     Expanded(child: TextField(controller: _lngController, decoration: const InputDecoration(labelText: 'Longitudine'))),
                   ],
+                ),
+                const SizedBox(height: 10),
+                const Text('Portata d\'Acqua:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                Row(
+                  children: portateDisponibili.map((p) {
+                    return Expanded(
+                      child: RadioListTile<String>(
+                        title: Text(p, style: TextStyle(fontSize: 11, color: _getColorePortata(p), fontWeight: FontWeight.bold)),
+                        value: p,
+                        groupValue: portataSelezionata,
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        onChanged: (v) => setDialogState(() => portataSelezionata = v!),
+                      ),
+                    );
+                  }).toList(),
                 ),
                 CheckboxListTile(title: const Text('UNI 45'), value: hasUni45, onChanged: (v) => setDialogState(() => hasUni45 = v ?? false)),
                 CheckboxListTile(title: const Text('UNI 70'), value: hasUni70, onChanged: (v) => setDialogState(() => hasUni70 = v ?? false)),
@@ -1389,6 +1434,7 @@ class _HomePageState extends State<HomePage> {
                   hasUni45: hasUni45,
                   hasUni70: hasUni70,
                   isH24: isH24,
+                  portata: portataSelezionata,
                   mezziCompatibili: selMezzi,
                   note: _noteController.text,
                   modificatoDa: mioProfilo != null ? '${mioProfilo!['nome_cognome']} (${mioProfilo!['ruolo']})' : '',
@@ -1413,6 +1459,7 @@ class _HomePageState extends State<HomePage> {
     bool hasUni45 = idrante.hasUni45;
     bool hasUni70 = idrante.hasUni70;
     bool isH24 = idrante.isH24;
+    String portataSelezionata = idrante.portata.isNotEmpty ? idrante.portata : 'Sufficiente';
     Map<String, bool> mezziSelezionati = {
       for (var m in mezziDisponibili) m: idrante.mezziCompatibili.contains(m),
     };
@@ -1434,6 +1481,22 @@ class _HomePageState extends State<HomePage> {
                     const SizedBox(width: 8),
                     Expanded(child: TextField(controller: _lngController, decoration: const InputDecoration(labelText: 'Longitudine'))),
                   ],
+                ),
+                const SizedBox(height: 10),
+                const Text('Portata d\'Acqua:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                Row(
+                  children: portateDisponibili.map((p) {
+                    return Expanded(
+                      child: RadioListTile<String>(
+                        title: Text(p, style: TextStyle(fontSize: 11, color: _getColorePortata(p), fontWeight: FontWeight.bold)),
+                        value: p,
+                        groupValue: portataSelezionata,
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        onChanged: (v) => setDialogState(() => portataSelezionata = v!),
+                      ),
+                    );
+                  }).toList(),
                 ),
                 CheckboxListTile(title: const Text('UNI 45'), value: hasUni45, onChanged: (v) => setDialogState(() => hasUni45 = v ?? false)),
                 CheckboxListTile(title: const Text('UNI 70'), value: hasUni70, onChanged: (v) => setDialogState(() => hasUni70 = v ?? false)),
@@ -1469,6 +1532,7 @@ class _HomePageState extends State<HomePage> {
                   hasUni45: hasUni45,
                   hasUni70: hasUni70,
                   isH24: isH24,
+                  portata: portataSelezionata,
                   mezziCompatibili: selMezzi,
                   note: _noteController.text,
                   modificatoDa: mioProfilo != null ? '${mioProfilo!['nome_cognome']} (${mioProfilo!['ruolo']})' : '',
@@ -1782,6 +1846,7 @@ class PuntoIdrico {
   final bool hasUni70;
   final bool isH24;
   final String note;
+  final String portata;
   final String creatoDa;
   final String modificatoDa;
 
@@ -1798,6 +1863,7 @@ class PuntoIdrico {
     this.hasUni70 = true,
     this.isH24 = true,
     this.note = '',
+    this.portata = '',
     this.creatoDa = '',
     this.modificatoDa = '',
   });
@@ -1815,6 +1881,7 @@ class PuntoIdrico {
       'hasuni70': hasUni70,
       'ish24': isH24,
       'note': note,
+      'portata': portata,
       'modificato_da': modificatoDa,
     };
   }
@@ -1836,6 +1903,7 @@ class PuntoIdrico {
       hasUni70: map5['hasuni70'] == true,
       isH24: map5['ish24'] ?? true,
       note: map5['note']?.toString() ?? '',
+      portata: map5['portata']?.toString() ?? '',
       creatoDa: map5['creato_da']?.toString() ?? '',
       modificatoDa: map5['modificato_da']?.toString() ?? '',
     );
