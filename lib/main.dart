@@ -1149,7 +1149,6 @@ class _HomePageState extends State<HomePage> {
                 ],
               ),
             ),
-            // MAPPA STANDARD CON BUSSOLA SPENTA DI DEFAULT
             SizedBox(
               height: 250,
               child: Stack(
@@ -1191,13 +1190,11 @@ class _HomePageState extends State<HomePage> {
                       ),
                     ],
                   ),
-                  // BUSSOLA NELL'ANGOLO SUPERIORE SINISTRO
                   Positioned(
                     left: 10,
                     top: 10,
                     child: WidgetBussolaSensori(mapController: _mapController),
                   ),
-                  // PULSANTE FULLSCREEN NELL'ANGOLO SUPERIORE DESTRO
                   Positioned(
                     right: 10,
                     top: 10,
@@ -1488,7 +1485,6 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-// WIDGET BUSSOLA SPENTA DI DEFAULT
 class WidgetBussolaSensori extends StatefulWidget {
   final MapController mapController;
   const WidgetBussolaSensori({super.key, required this.mapController});
@@ -1500,6 +1496,7 @@ class WidgetBussolaSensori extends StatefulWidget {
 class _WidgetBussolaSensoriState extends State<WidgetBussolaSensori> {
   bool _bussolaAttiva = false;
   double _heading = 0.0;
+  double _filteredHeading = 0.0;
 
   String _getDirezioneCardinale(double gradi) {
     if (gradi >= 337.5 || gradi < 22.5) return 'N (Nord)';
@@ -1523,7 +1520,15 @@ class _WidgetBussolaSensoriState extends State<WidgetBussolaSensori> {
           double y = snapshot.data!.y;
           double heading = atan2(y, x) * (180 / pi);
           if (heading < 0) heading += 360;
-          _heading = heading;
+          
+          double diff = heading - _filteredHeading;
+          if (diff > 180) diff -= 360;
+          if (diff < -180) diff += 360;
+
+          if (diff.abs() > 1.5) {
+            _filteredHeading = (_filteredHeading + diff * 0.2 + 360) % 360;
+          }
+          _heading = _filteredHeading;
         }
 
         double normalizedHeading = (_heading % 360 + 360) % 360;
