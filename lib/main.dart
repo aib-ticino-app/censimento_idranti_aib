@@ -1113,6 +1113,15 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    // Ordiniamo subito i punti usando la linea d'aria finché la rete stradale si calcola in background
+    if (listaIdranti.isNotEmpty) {
+      listaIdranti.sort((a, b) {
+        double distA = _distanzeStradaliCache[a.id] ?? _calcolaDistanzaKm(posizioneCorrenteLat, posizioneCorrenteLng, a.latitudine, a.longitudine);
+        double distB = _distanzeStradaliCache[b.id] ?? _calcolaDistanzaKm(posizioneCorrenteLat, posizioneCorrenteLng, b.latitudine, b.longitudine);
+        return distA.compareTo(distB);
+      });
+    }
+
     final idrantiMostrati = _idrantiFiltratiEVicini;
 
     return Scaffold(
