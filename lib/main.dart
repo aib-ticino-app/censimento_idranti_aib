@@ -305,6 +305,7 @@ class _HomePageState extends State<HomePage> {
   int utentiDaApprovare = 0;
 
   final MapController _mapController = MapController();
+  final Map<String, double> _distanzeStradaliCache = {};
 
   final List<String> mezziDisponibili = [
     'Pickup Modulo AIB',
@@ -385,6 +386,7 @@ class _HomePageState extends State<HomePage> {
         });
         _mapController.move(LatLng(posizioneCorrenteLat, posizioneCorrenteLng), 14.5);
         _mapController.rotate(0.0);
+        _aggiornaDistanzeStradaliInBackground(listaIdranti);
         _mostraMessaggio('Posizione GPS aggiornata e orientata al Nord!');
       }
     } catch (_) {
@@ -409,9 +411,11 @@ class _HomePageState extends State<HomePage> {
 
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
+        final idrantiCaricati = data.map((item) => PuntoIdrico.fromMap(item)).toList();
         setState(() {
-          listaIdranti = data.map((item) => PuntoIdrico.fromMap(item)).toList();
+          listaIdranti = idrantiCaricati;
         });
+        _aggiornaDistanzeStradaliInBackground(idrantiCaricati);
         _mostraMessaggio('Dati aggiornati da Supabase!');
       }
     } catch (_) {
@@ -419,6 +423,40 @@ class _HomePageState extends State<HomePage> {
     } finally {
       setState(() => _caricamentoCloud = false);
     }
+  }
+
+  Future<void> _aggiornaDistanzeStradaliInBackground(List<PuntoIdrico> idranti) async {
+    for (var idrante in idranti) {
+      if (!_distanzeStradaliCache.containsKey(idrante.id)) {
+        double distStrada = await _fetchOsrmDistance(
+          posizioneCorrenteLat,
+          posizioneCorrenteLng,
+          idrante.latitudine,
+          idrante.longitudine,
+        );
+        if (mounted) {
+          setState(() {
+            _distanzeStradaliCache[idrante.id] = distStrada;
+          });
+        }
+      }
+    }
+  }
+
+  Future<double> _fetchOsrmDistance(double lat1, double lon1, double lat2, double lon2) async {
+    try {
+      final url = Uri.parse('https://router.project-osrm.org/route/v1/driving/$lon1,$lat1;$lon2,$lat2?overview=false');
+      final response = await http.get(url).timeout(const Duration(seconds: 4));
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['code'] == 'Ok' && data['routes'] != null && (data['routes'] as List).isNotEmpty) {
+          double meters = data['routes'][0]['distance'];
+          return meters / 1000.0;
+        }
+      }
+    } catch (_) {}
+    // Fallback automatico alla linea d'aria se offline o errore server
+    return _calcolaDistanzaKm(lat1, lon1, lat2, lon2);
   }
 
   Future<void> _salvaIdranteSuSupabase(PuntoIdrico idrante) async {
@@ -595,6 +633,7 @@ class _HomePageState extends State<HomePage> {
     String latGMS = _convertiInWGS84GMS(idrante.latitudine, true);
     String lngGMS = _convertiInWGS84GMS(idrante.longitudine, false);
     String utmStr = _convertiInUTM(idrante.latitudine, idrante.longitudine);
+    double distStrada = _distanzeStradaliCache[idrante.id] ?? _calcolaDistanzaKm(posizioneCorrenteLat, posizioneCorrenteLng, idrante.latitudine, idrante.longitudine);
 
     List<String> attacchi = [];
     if (idrante.hasUni45) attacchi.add('UNI 45');
@@ -613,6 +652,7 @@ class _HomePageState extends State<HomePage> {
 - Accesso: ${idrante.isH24 ? "H24" : "Privato"}
 - Stato: ${idrante.stato}
 - Portata: $portataStr
+- Distanza Strada: ${distStrada.toStringAsFixed(2)} km
 - Attacchi: $attacchiStr$mezziStrWeb$notaStrWeb$modStrWeb
 - WGS84: $latGMS - $lngGMS
 - UTM: $utmStr
@@ -630,6 +670,7 @@ class _HomePageState extends State<HomePage> {
 🔑 Accesso: ${idrante.isH24 ? "H24" : "Privato"}
 🟢 Stato: ${idrante.stato}
 💧 Portata: $portataStr
+🛣️ Distanza Strada: ${distStrada.toStringAsFixed(2)} km
 ⚙️ Attacchi: $attacchiStr$mezziStrApp$notaStrApp$modStrApp
 🌐 WGS84: $latGMS - $lngGMS
 📐 UTM: $utmStr
@@ -738,11 +779,12 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  void _mostraDettaglioIdrante(PuntoIdrico idrante, double distanzaKm) {
+  void _mostraDettaglioIdrante(PuntoIdrico idrante) {
     _mapController.move(LatLng(idrante.latitudine, idrante.longitudine), 15.0);
     String latGMS = _convertiInWGS84GMS(idrante.latitudine, true);
     String lngGMS = _convertiInWGS84GMS(idrante.longitudine, false);
     String utmStr = _convertiInUTM(idrante.latitudine, idrante.longitudine);
+    double distStrada = _distanzeStradaliCache[idrante.id] ?? _calcolaDistanzaKm(posizioneCorrenteLat, posizioneCorrenteLng, idrante.latitudine, idrante.longitudine);
 
     showDialog(
       context: context,
@@ -769,7 +811,13 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(height: 6),
               Text('Accesso: ${idrante.isH24 ? "H24 (Pubblico)" : "Proprietà Privata"}'),
               const SizedBox(height: 6),
-              Text('Distanza: ${distanzaKm.toStringAsFixed(2)} km', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+              Row(
+                children: [
+                  const Icon(Icons.alt_route, size: 16, color: Colors.green),
+                  const SizedBox(width: 4),
+                  Text('Distanza stradale: ${distStrada.toStringAsFixed(2)} km', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+                ],
+              ),
               const Divider(),
               Text('WGS84: $latGMS - $lngGMS', style: const TextStyle(fontSize: 12)),
               Text('UTM: $utmStr', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.blueGrey)),
@@ -839,8 +887,7 @@ class _HomePageState extends State<HomePage> {
           posizioneLng: posizioneCorrenteLng,
           usaMappaTopografica: _usaMappaTopografica,
           onTapIdrante: (idrante) {
-            double dist = _calcolaDistanzaKm(posizioneCorrenteLat, posizioneCorrenteLng, idrante.latitudine, idrante.longitudine);
-            _mostraDettaglioIdrante(idrante, dist);
+            _mostraDettaglioIdrante(idrante);
           },
         ),
       ),
@@ -862,8 +909,8 @@ class _HomePageState extends State<HomePage> {
     }).toList();
 
     listaFiltrata.sort((a, b) {
-      double distA = _calcolaDistanzaKm(posizioneCorrenteLat, posizioneCorrenteLng, a.latitudine, a.longitudine);
-      double distB = _calcolaDistanzaKm(posizioneCorrenteLat, posizioneCorrenteLng, b.latitudine, b.longitudine);
+      double distA = _distanzeStradaliCache[a.id] ?? _calcolaDistanzaKm(posizioneCorrenteLat, posizioneCorrenteLng, a.latitudine, a.longitudine);
+      double distB = _distanzeStradaliCache[b.id] ?? _calcolaDistanzaKm(posizioneCorrenteLat, posizioneCorrenteLng, b.latitudine, b.longitudine);
       return distA.compareTo(distB);
     });
 
@@ -1154,7 +1201,7 @@ class _HomePageState extends State<HomePage> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Mappa AIB', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
+                  const Text('Mappa AIB (Distanze Stradali)', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
                   Row(
                     children: [
                       Text('GPS: ${posizioneCorrenteLat.toStringAsFixed(4)}, ${posizioneCorrenteLng.toStringAsFixed(4)}',
@@ -1204,7 +1251,7 @@ class _HomePageState extends State<HomePage> {
                             return Marker(
                               point: LatLng(idrante.latitudine, idrante.longitudine),
                               child: GestureDetector(
-                                onTap: () => _mostraDettaglioIdrante(idrante, _calcolaDistanzaKm(posizioneCorrenteLat, posizioneCorrenteLng, idrante.latitudine, idrante.longitudine)),
+                                onTap: () => _mostraDettaglioIdrante(idrante),
                                 child: CircleAvatar(
                                   backgroundColor: _getColoreStato(idrante.stato),
                                   child: _buildIconaSimbolo(idrante, size: 18),
@@ -1263,11 +1310,11 @@ class _HomePageState extends State<HomePage> {
               itemCount: idrantiMostrati.length,
               itemBuilder: (ctx, index) {
                 final idrante = idrantiMostrati[index];
-                double dist = _calcolaDistanzaKm(posizioneCorrenteLat, posizioneCorrenteLng, idrante.latitudine, idrante.longitudine);
+                double distStrada = _distanzeStradaliCache[idrante.id] ?? _calcolaDistanzaKm(posizioneCorrenteLat, posizioneCorrenteLng, idrante.latitudine, idrante.longitudine);
                 return Card(
                   margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   child: InkWell(
-                    onTap: () => _mostraDettaglioIdrante(idrante, dist),
+                    onTap: () => _mostraDettaglioIdrante(idrante),
                     child: Padding(
                       padding: const EdgeInsets.all(10.0),
                       child: Row(
@@ -1295,7 +1342,13 @@ class _HomePageState extends State<HomePage> {
                                   ],
                                 ),
                                 const SizedBox(height: 2),
-                                Text('Dist: ${dist.toStringAsFixed(2)} km', style: const TextStyle(fontSize: 11)),
+                                Row(
+                                  children: [
+                                    const Icon(Icons.alt_route, size: 13, color: Colors.green),
+                                    const SizedBox(width: 3),
+                                    Text('Strada: ${distStrada.toStringAsFixed(2)} km', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.green)),
+                                  ],
+                                ),
                                 if (idrante.mezziCompatibili.isNotEmpty)
                                   Text('Mezzi: ${idrante.mezziCompatibili.join(', ')}', style: const TextStyle(fontSize: 11, color: Colors.blueGrey)),
                                 if (idrante.note.isNotEmpty)
