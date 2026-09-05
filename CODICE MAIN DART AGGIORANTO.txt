@@ -455,6 +455,7 @@ class _HomePageState extends State<HomePage> {
         }
       }
     } catch (_) {}
+    // Fallback automatico alla linea d'aria se offline o errore server
     return _calcolaDistanzaKm(lat1, lon1, lat2, lon2);
   }
 
@@ -1200,9 +1201,24 @@ class _HomePageState extends State<HomePage> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Mappa AIB', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
-                  Text('GPS: ${posizioneCorrenteLat.toStringAsFixed(4)}, ${posizioneCorrenteLng.toStringAsFixed(4)}',
-                      style: const TextStyle(color: Colors.white70, fontSize: 11)),
+                  const Text('Mappa AIB (Distanze Stradali)', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
+                  Row(
+                    children: [
+                      Text('GPS: ${posizioneCorrenteLat.toStringAsFixed(4)}, ${posizioneCorrenteLng.toStringAsFixed(4)}',
+                          style: const TextStyle(color: Colors.white70, fontSize: 11)),
+                      const SizedBox(width: 8),
+                      InkWell(
+                        onTap: _apriMappaFullscreen,
+                        child: const Row(
+                          children: [
+                            Icon(Icons.fullscreen, color: Colors.white, size: 16),
+                            SizedBox(width: 2),
+                            Text('Schermo Intero', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -1927,11 +1943,6 @@ class PuntoIdrico {
     String mezziRaw = map5['mezzicompatibili']?.toString() ?? '';
     List<String> mezzi = mezziRaw.isNotEmpty ? mezziRaw.split(',') : [];
 
-    String portataVal = map5['portata']?.toString() ?? '';
-    if (portataVal.isEmpty && map5.containsKey('portata_acqua')) {
-      portataVal = map5['portata_acqua']?.toString() ?? '';
-    }
-
     return PuntoIdrico(
       id: map5['id']?.toString() ?? '',
       codice: map5['codice']?.toString() ?? 'IDR-00',
@@ -1945,7 +1956,7 @@ class PuntoIdrico {
       hasUni70: map5['hasuni70'] == true,
       isH24: map5['ish24'] ?? true,
       note: map5['note']?.toString() ?? '',
-      portata: portataVal,
+      portata: map5['portata']?.toString() ?? '',
       creatoDa: map5['creato_da']?.toString() ?? '',
       modificatoDa: map5['modificato_da']?.toString() ?? '',
     );
