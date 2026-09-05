@@ -15,7 +15,7 @@ import 'package:sensors_plus/sensors_plus.dart';
 
 const String supabaseUrl = 'https://srielrbjejggxvpeshfd.supabase.co';
 const String supabaseApiKey =
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNyaWVscmJqZWpnZ3h2cGVzaGZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODczMjcwMzAsImV4cCI6MjEwMjkwMzAzMH0.3nX0meQZYEAIMEvuFSZVP0CTvgbTKES5bS5gDRDFa-c';
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNyaWVscmJqZWpnZ3h2cGVzaGZkIIsInJvbGUiOiJhbm9uIiwiaWF0IjoxNzg3MzI3MDMwLCJleHAiOjIxMDI5MDMwMzB9.3nX0meQZYEAIMEvuFSZVP0CTvgbTKES5bS5gDRDFa-c';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -297,8 +297,9 @@ class _HomePageState extends State<HomePage> {
   String _filtroSelezionato = 'Tutti';
   bool _usaMappaTopografica = false;
 
-  double posizioneCorrenteLat = 45.6512;
-  double posizioneCorrenteLng = 8.7123;
+  double posizioneCorrenteLat = 45.6881;
+  double posizioneCorrenteLng = 8.8412;
+  bool _gpsPronto = false;
   bool _caricamentoCloud = false;
 
   Map<String, dynamic>? mioProfilo;
@@ -334,8 +335,12 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _caricaProfiloUtente();
-    _ottieniPosizioneGPS();
-    _caricaIdrantiDaSupabase();
+    _inizializzaAvvio();
+  }
+
+  Future<void> _inizializzaAvvio() async {
+    await _ottieniPosizioneGPS();
+    await _caricaIdrantiDaSupabase();
   }
 
   Future<void> _caricaProfiloUtente() async {
@@ -383,14 +388,18 @@ class _HomePageState extends State<HomePage> {
         setState(() {
           posizioneCorrenteLat = position.latitude;
           posizioneCorrenteLng = position.longitude;
+          _gpsPronto = true;
         });
         _mapController.move(LatLng(posizioneCorrenteLat, posizioneCorrenteLng), 14.5);
         _mapController.rotate(0.0);
-        _aggiornaDistanzeStradaliInBackground(listaIdranti);
-        _mostraMessaggio('Posizione GPS aggiornata e orientata al Nord!');
+        if (listaIdranti.isNotEmpty) {
+          _aggiornaDistanzeStradaliInBackground(listaIdranti);
+        }
       }
     } catch (_) {
-      _mostraMessaggio('Impossibile rilevare la posizione GPS.', isError: true);
+      if (mounted) {
+        setState(() => _gpsPronto = true);
+      }
     }
   }
 
@@ -416,7 +425,6 @@ class _HomePageState extends State<HomePage> {
           listaIdranti = idrantiCaricati;
         });
         _aggiornaDistanzeStradaliInBackground(idrantiCaricati);
-        _mostraMessaggio('Dati aggiornati da Supabase!');
       }
     } catch (_) {
       _mostraMessaggio('Errore di connessione (modalità offline attiva).', isError: true);
@@ -455,7 +463,6 @@ class _HomePageState extends State<HomePage> {
         }
       }
     } catch (_) {}
-    // Fallback sicuro con coefficiente stradale medio per evitare errori anomali
     return _calcolaDistanzaKm(lat1, lon1, lat2, lon2) * 1.35;
   }
 
@@ -908,7 +915,6 @@ class _HomePageState extends State<HomePage> {
       return true;
     }).toList();
 
-    // Ordinamento stabile e sicuro basato sulla distanza stradale (se calcolata) o fallback geometrico preciso
     listaFiltrata.sort((a, b) {
       double distA = _distanzeStradaliCache[a.id] ?? (_calcolaDistanzaKm(posizioneCorrenteLat, posizioneCorrenteLng, a.latitudine, a.longitudine) * 1.35);
       double distB = _distanzeStradaliCache[b.id] ?? (_calcolaDistanzaKm(posizioneCorrenteLat, posizioneCorrenteLng, b.latitudine, b.longitudine) * 1.35);
@@ -1190,199 +1196,210 @@ class _HomePageState extends State<HomePage> {
           const SizedBox(width: 4),
         ],
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (_caricamentoCloud) const LinearProgressIndicator(color: Colors.orange),
-            Container(
-              height: 36,
-              color: Colors.blue[900],
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      body: !_gpsPronto
+          ? const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text('Mappa AIB', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
-                  Text('GPS: ${posizioneCorrenteLat.toStringAsFixed(4)}, ${posizioneCorrenteLng.toStringAsFixed(4)}',
-                      style: const TextStyle(color: Colors.white70, fontSize: 11)),
+                  CircularProgressIndicator(color: Colors.blue),
+                  SizedBox(height: 12),
+                  Text('Rilevamento posizione GPS a Bolladello...', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey)),
                 ],
               ),
-            ),
-            SizedBox(
-              height: 250,
-              child: Stack(
+            )
+          : SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  FlutterMap(
-                    mapController: _mapController,
-                    options: MapOptions(
-                      initialCenter: LatLng(posizioneCorrenteLat, posizioneCorrenteLng),
-                      initialZoom: 13.5,
+                  if (_caricamentoCloud) const LinearProgressIndicator(color: Colors.orange),
+                  Container(
+                    height: 36,
+                    color: Colors.blue[900],
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Mappa AIB', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
+                        Text('GPS: ${posizioneCorrenteLat.toStringAsFixed(4)}, ${posizioneCorrenteLng.toStringAsFixed(4)}',
+                            style: const TextStyle(color: Colors.white70, fontSize: 11)),
+                      ],
                     ),
-                    children: [
-                      TileLayer(
-                        urlTemplate: _usaMappaTopografica
-                            ? 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png'
-                            : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                        subdomains: _usaMappaTopografica ? const ['a', 'b', 'c'] : const [],
-                        userAgentPackageName: 'com.example.idranti_aib',
-                        maxZoom: 17,
-                      ),
-                      MarkerLayer(
-                        markers: [
-                          Marker(
-                            point: LatLng(posizioneCorrenteLat, posizioneCorrenteLng),
-                            child: const Icon(Icons.navigation, color: Colors.blueAccent, size: 30),
+                  ),
+                  SizedBox(
+                    height: 250,
+                    child: Stack(
+                      children: [
+                        FlutterMap(
+                          mapController: _mapController,
+                          options: MapOptions(
+                            initialCenter: LatLng(posizioneCorrenteLat, posizioneCorrenteLng),
+                            initialZoom: 13.5,
                           ),
-                          ...idrantiMostrati.map((idrante) {
-                            return Marker(
-                              point: LatLng(idrante.latitudine, idrante.longitudine),
-                              child: GestureDetector(
-                                onTap: () => _mostraDettaglioIdrante(idrante),
-                                child: CircleAvatar(
+                          children: [
+                            TileLayer(
+                              urlTemplate: _usaMappaTopografica
+                                  ? 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png'
+                                  : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                              subdomains: _usaMappaTopografica ? const ['a', 'b', 'c'] : const [],
+                              userAgentPackageName: 'com.example.idranti_aib',
+                              maxZoom: 17,
+                            ),
+                            MarkerLayer(
+                              markers: [
+                                Marker(
+                                  point: LatLng(posizioneCorrenteLat, posizioneCorrenteLng),
+                                  child: const Icon(Icons.navigation, color: Colors.blueAccent, size: 30),
+                                ),
+                                ...idrantiMostrati.map((idrante) {
+                                  return Marker(
+                                    point: LatLng(idrante.latitudine, idrante.longitudine),
+                                    child: GestureDetector(
+                                      onTap: () => _mostraDettaglioIdrante(idrante),
+                                      child: CircleAvatar(
+                                        backgroundColor: _getColoreStato(idrante.stato),
+                                        child: _buildIconaSimbolo(idrante, size: 18),
+                                      ),
+                                    ),
+                                  );
+                                }),
+                              ],
+                            ),
+                          ],
+                        ),
+                        Positioned(
+                          left: 10,
+                          top: 10,
+                          child: WidgetBussolaSensori(mapController: _mapController),
+                        ),
+                        Positioned(
+                          right: 10,
+                          top: 10,
+                          child: FloatingActionButton.small(
+                            heroTag: 'fullscreen_btn',
+                            backgroundColor: Colors.blue[800],
+                            foregroundColor: Colors.white,
+                            tooltip: 'Espandi Mappa a Schermo Intero',
+                            onPressed: _apriMappaFullscreen,
+                            child: const Icon(Icons.fullscreen, size: 24),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Punti Censiti (${listaIdranti.length})', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                        ElevatedButton.icon(
+                          onPressed: _mostraDialogoNuovoIdrante,
+                          icon: const Icon(Icons.add, size: 16),
+                          label: const Text('Idrante'),
+                          style: ElevatedButton.styleFrom(backgroundColor: Colors.blue[700], foregroundColor: Colors.white),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                    child: Row(children: [_buildFilterChip('Tutti'), _buildFilterChip('Idranti'), _buildFilterChip('Vasche'), _buildFilterChip('Prese d\'Acqua')]),
+                  ),
+                  const SizedBox(height: 6),
+                  ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: idrantiMostrati.length,
+                    itemBuilder: (ctx, index) {
+                      final idrante = idrantiMostrati[index];
+                      double distStrada = _distanzeStradaliCache[idrante.id] ?? (_calcolaDistanzaKm(posizioneCorrenteLat, posizioneCorrenteLng, idrante.latitudine, idrante.longitudine) * 1.35);
+                      return Card(
+                        margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        child: InkWell(
+                          onTap: () => _mostraDettaglioIdrante(idrante),
+                          child: Padding(
+                            padding: const EdgeInsets.all(10.0),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                CircleAvatar(
                                   backgroundColor: _getColoreStato(idrante.stato),
                                   child: _buildIconaSimbolo(idrante, size: 18),
                                 ),
-                              ),
-                            );
-                          }),
-                        ],
-                      ),
-                    ],
-                  ),
-                  Positioned(
-                    left: 10,
-                    top: 10,
-                    child: WidgetBussolaSensori(mapController: _mapController),
-                  ),
-                  Positioned(
-                    right: 10,
-                    top: 10,
-                    child: FloatingActionButton.small(
-                      heroTag: 'fullscreen_btn',
-                      backgroundColor: Colors.blue[800],
-                      foregroundColor: Colors.white,
-                      tooltip: 'Espandi Mappa a Schermo Intero',
-                      onPressed: _apriMappaFullscreen,
-                      child: const Icon(Icons.fullscreen, size: 24),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Punti Censiti (${listaIdranti.length})', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                  ElevatedButton.icon(
-                    onPressed: _mostraDialogoNuovoIdrante,
-                    icon: const Icon(Icons.add, size: 16),
-                    label: const Text('Idrante'),
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.blue[700], foregroundColor: Colors.white),
-                  ),
-                ],
-              ),
-            ),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 12.0),
-              child: Row(children: [_buildFilterChip('Tutti'), _buildFilterChip('Idranti'), _buildFilterChip('Vasche'), _buildFilterChip('Prese d\'Acqua')]),
-            ),
-            const SizedBox(height: 6),
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: idrantiMostrati.length,
-              itemBuilder: (ctx, index) {
-                final idrante = idrantiMostrati[index];
-                double distStrada = _distanzeStradaliCache[idrante.id] ?? (_calcolaDistanzaKm(posizioneCorrenteLat, posizioneCorrenteLng, idrante.latitudine, idrante.longitudine) * 1.35);
-                return Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  child: InkWell(
-                    onTap: () => _mostraDettaglioIdrante(idrante),
-                    child: Padding(
-                      padding: const EdgeInsets.all(10.0),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          CircleAvatar(
-                            backgroundColor: _getColoreStato(idrante.stato),
-                            child: _buildIconaSimbolo(idrante, size: 18),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('${idrante.codice} - ${idrante.tipo}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                                Text('${idrante.ubicazione} (${idrante.isH24 ? "H24" : "Privato"})', style: const TextStyle(fontSize: 12)),
-                                const SizedBox(height: 4),
-                                Row(
-                                  children: [
-                                    _buildBadgeAttacco('UNI 45', idrante.hasUni45),
-                                    const SizedBox(width: 6),
-                                    _buildBadgeAttacco('UNI 70', idrante.hasUni70),
-                                    const SizedBox(width: 8),
-                                    Text('Portata: ${idrante.portata.isNotEmpty ? idrante.portata : "N/D"}', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: _getColorePortata(idrante.portata))),
-                                  ],
-                                ),
-                                const SizedBox(height: 2),
-                                Row(
-                                  children: [
-                                    const Icon(Icons.alt_route, size: 13, color: Colors.green),
-                                    const SizedBox(width: 3),
-                                    Text('Strada: ${distStrada.toStringAsFixed(2)} km', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.green)),
-                                  ],
-                                ),
-                                if (idrante.mezziCompatibili.isNotEmpty)
-                                  Text('Mezzi: ${idrante.mezziCompatibili.join(', ')}', style: const TextStyle(fontSize: 11, color: Colors.blueGrey)),
-                                if (idrante.note.isNotEmpty)
-                                  Text('Note: ${idrante.note}', style: TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: Colors.amber[900])),
-                                if (idrante.modificatoDa.isNotEmpty)
-                                  Text('Modificato da: ${idrante.modificatoDa}', style: const TextStyle(fontSize: 10, color: Colors.grey)),
-                                const SizedBox(height: 6),
-                                Row(
-                                  children: [
-                                    if (possoModificareEEliminare)
-                                      InkWell(
-                                        onTap: () => _mostraDialogoModificaIdrante(idrante),
-                                        child: const Padding(padding: EdgeInsets.only(right: 12.0), child: Icon(Icons.edit, size: 20, color: Colors.orange)),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text('${idrante.codice} - ${idrante.tipo}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                                      Text('${idrante.ubicazione} (${idrante.isH24 ? "H24" : "Privato"})', style: const TextStyle(fontSize: 12)),
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        children: [
+                                          _buildBadgeAttacco('UNI 45', idrante.hasUni45),
+                                          const SizedBox(width: 6),
+                                          _buildBadgeAttacco('UNI 70', idrante.hasUni70),
+                                          const SizedBox(width: 8),
+                                          Text('Portata: ${idrante.portata.isNotEmpty ? idrante.portata : "N/D"}', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: _getColorePortata(idrante.portata))),
+                                        ],
                                       ),
-                                    if (possoModificareEEliminare)
-                                      InkWell(
-                                        onTap: () => _confermaEliminazioneIdrante(idrante),
-                                        child: const Padding(padding: EdgeInsets.only(right: 12.0), child: Icon(Icons.delete, size: 20, color: Colors.red)),
+                                      const SizedBox(height: 2),
+                                      Row(
+                                        children: [
+                                          const Icon(Icons.alt_route, size: 13, color: Colors.green),
+                                          const SizedBox(width: 3),
+                                          Text('Strada: ${distStrada.toStringAsFixed(2)} km', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.green)),
+                                        ],
                                       ),
-                                    PopupMenuButton<String>(
-                                      padding: EdgeInsets.zero,
-                                      icon: const Icon(Icons.build_circle, size: 20, color: Colors.blueGrey),
-                                      onSelected: (st) => _cambiaStatoIdrante(idrante, st),
-                                      itemBuilder: (_) => [
-                                        const PopupMenuItem(value: 'Funzionante', child: Text('Funzionante')),
-                                        const PopupMenuItem(value: 'Non Funzionante', child: Text('Non Funzionante')),
-                                        const PopupMenuItem(value: 'Da Verificare', child: Text('Da Verificare')),
-                                      ],
-                                    ),
-                                    InkWell(
-                                      onTap: () => _condividiPuntoIdrico(idrante),
-                                      child: const Padding(padding: EdgeInsets.symmetric(horizontal: 8.0), child: Icon(Icons.share, size: 20, color: Colors.green)),
-                                    ),
-                                  ],
+                                      if (idrante.mezziCompatibili.isNotEmpty)
+                                        Text('Mezzi: ${idrante.mezziCompatibili.join(', ')}', style: const TextStyle(fontSize: 11, color: Colors.blueGrey)),
+                                      if (idrante.note.isNotEmpty)
+                                        Text('Note: ${idrante.note}', style: TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: Colors.amber[900])),
+                                      if (idrante.modificatoDa.isNotEmpty)
+                                        Text('Modificato da: ${idrante.modificatoDa}', style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                                      const SizedBox(height: 6),
+                                      Row(
+                                        children: [
+                                          if (possoModificareEEliminare)
+                                            InkWell(
+                                              onTap: () => _mostraDialogoModificaIdrante(idrante),
+                                              child: const Padding(padding: EdgeInsets.only(right: 12.0), child: Icon(Icons.edit, size: 20, color: Colors.orange)),
+                                            ),
+                                          if (possoModificareEEliminare)
+                                            InkWell(
+                                              onTap: () => _confermaEliminazioneIdrante(idrante),
+                                              child: const Padding(padding: EdgeInsets.only(right: 12.0), child: Icon(Icons.delete, size: 20, color: Colors.red)),
+                                            ),
+                                          PopupMenuButton<String>(
+                                            padding: EdgeInsets.zero,
+                                            icon: const Icon(Icons.build_circle, size: 20, color: Colors.blueGrey),
+                                            onSelected: (st) => _cambiaStatoIdrante(idrante, st),
+                                            itemBuilder: (_) => [
+                                              const PopupMenuItem(value: 'Funzionante', child: Text('Funzionante')),
+                                              const PopupMenuItem(value: 'Non Funzionante', child: Text('Non Funzionante')),
+                                              const PopupMenuItem(value: 'Da Verificare', child: Text('Da Verificare')),
+                                            ],
+                                          ),
+                                          InkWell(
+                                            onTap: () => _condividiPuntoIdrico(idrante),
+                                            child: const Padding(padding: EdgeInsets.symmetric(horizontal: 8.0), child: Icon(Icons.share, size: 20, color: Colors.green)),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ],
                             ),
                           ),
-                        ],
-                      ),
-                    ),
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
+                ],
+              ),
             ),
-          ],
-        ),
-      ),
     );
   }
 
