@@ -455,7 +455,8 @@ class _HomePageState extends State<HomePage> {
         }
       }
     } catch (_) {}
-    return _calcolaDistanzaKm(lat1, lon1, lat2, lon2);
+    // Fallback sicuro con coefficiente stradale medio per evitare errori anomali
+    return _calcolaDistanzaKm(lat1, lon1, lat2, lon2) * 1.35;
   }
 
   Future<void> _salvaIdranteSuSupabase(PuntoIdrico idrante) async {
@@ -632,7 +633,7 @@ class _HomePageState extends State<HomePage> {
     String latGMS = _convertiInWGS84GMS(idrante.latitudine, true);
     String lngGMS = _convertiInWGS84GMS(idrante.longitudine, false);
     String utmStr = _convertiInUTM(idrante.latitudine, idrante.longitudine);
-    double distStrada = _distanzeStradaliCache[idrante.id] ?? _calcolaDistanzaKm(posizioneCorrenteLat, posizioneCorrenteLng, idrante.latitudine, idrante.longitudine);
+    double distStrada = _distanzeStradaliCache[idrante.id] ?? (_calcolaDistanzaKm(posizioneCorrenteLat, posizioneCorrenteLng, idrante.latitudine, idrante.longitudine) * 1.35);
 
     List<String> attacchi = [];
     if (idrante.hasUni45) attacchi.add('UNI 45');
@@ -783,7 +784,7 @@ class _HomePageState extends State<HomePage> {
     String latGMS = _convertiInWGS84GMS(idrante.latitudine, true);
     String lngGMS = _convertiInWGS84GMS(idrante.longitudine, false);
     String utmStr = _convertiInUTM(idrante.latitudine, idrante.longitudine);
-    double distStrada = _distanzeStradaliCache[idrante.id] ?? _calcolaDistanzaKm(posizioneCorrenteLat, posizioneCorrenteLng, idrante.latitudine, idrante.longitudine);
+    double distStrada = _distanzeStradaliCache[idrante.id] ?? (_calcolaDistanzaKm(posizioneCorrenteLat, posizioneCorrenteLng, idrante.latitudine, idrante.longitudine) * 1.35);
 
     showDialog(
       context: context,
@@ -907,9 +908,10 @@ class _HomePageState extends State<HomePage> {
       return true;
     }).toList();
 
+    // Ordinamento stabile e sicuro basato sulla distanza stradale (se calcolata) o fallback geometrico preciso
     listaFiltrata.sort((a, b) {
-      double distA = _distanzeStradaliCache[a.id] ?? _calcolaDistanzaKm(posizioneCorrenteLat, posizioneCorrenteLng, a.latitudine, a.longitudine);
-      double distB = _distanzeStradaliCache[b.id] ?? _calcolaDistanzaKm(posizioneCorrenteLat, posizioneCorrenteLng, b.latitudine, b.longitudine);
+      double distA = _distanzeStradaliCache[a.id] ?? (_calcolaDistanzaKm(posizioneCorrenteLat, posizioneCorrenteLng, a.latitudine, a.longitudine) * 1.35);
+      double distB = _distanzeStradaliCache[b.id] ?? (_calcolaDistanzaKm(posizioneCorrenteLat, posizioneCorrenteLng, b.latitudine, b.longitudine) * 1.35);
       return distA.compareTo(distB);
     });
 
@@ -1113,15 +1115,6 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    // Ordiniamo subito i punti usando la linea d'aria finché la rete stradale si calcola in background
-    if (listaIdranti.isNotEmpty) {
-      listaIdranti.sort((a, b) {
-        double distA = _distanzeStradaliCache[a.id] ?? _calcolaDistanzaKm(posizioneCorrenteLat, posizioneCorrenteLng, a.latitudine, a.longitudine);
-        double distB = _distanzeStradaliCache[b.id] ?? _calcolaDistanzaKm(posizioneCorrenteLat, posizioneCorrenteLng, b.latitudine, b.longitudine);
-        return distA.compareTo(distB);
-      });
-    }
-
     final idrantiMostrati = _idrantiFiltratiEVicini;
 
     return Scaffold(
@@ -1303,7 +1296,7 @@ class _HomePageState extends State<HomePage> {
               itemCount: idrantiMostrati.length,
               itemBuilder: (ctx, index) {
                 final idrante = idrantiMostrati[index];
-                double distStrada = _distanzeStradaliCache[idrante.id] ?? _calcolaDistanzaKm(posizioneCorrenteLat, posizioneCorrenteLng, idrante.latitudine, idrante.longitudine);
+                double distStrada = _distanzeStradaliCache[idrante.id] ?? (_calcolaDistanzaKm(posizioneCorrenteLat, posizioneCorrenteLng, idrante.latitudine, idrante.longitudine) * 1.35);
                 return Card(
                   margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   child: InkWell(
