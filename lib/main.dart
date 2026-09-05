@@ -15,7 +15,7 @@ import 'package:sensors_plus/sensors_plus.dart';
 
 const String supabaseUrl = 'https://srielrbjejggxvpeshfd.supabase.co';
 const String supabaseApiKey =
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNyaWVscmJqZWpnZ3h2cGVzaGZkIIsInJvbGUiOiJhbm9uIiwiaWF0IjoxNzg3MzI3MDMwLCJleHAiOjIxMDI5MDMwMzB9.3nX0meQZYEAIMEvuFSZVP0CTvgbTKES5bS5gDRDFa-c';
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNyaWVscmJqZWpnZ3h2cGVzaGZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODczMjcwMzAsImV4cCI6MjEwMjkwMzAzMH0.3nX0meQZYEAIMEvuFSZVP0CTvgbTKES5bS5gDRDFa-c';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
