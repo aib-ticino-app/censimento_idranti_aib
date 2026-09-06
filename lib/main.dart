@@ -1,4 +1,4 @@
-import 'dart:convert';
+/import 'dart:convert';
 import 'dart:math';
 import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -1203,7 +1203,7 @@ class _HomePageState extends State<HomePage> {
                 children: [
                   CircularProgressIndicator(color: Colors.blue),
                   SizedBox(height: 12),
-                  Text('Rilevamento posizione GPS a Bolladello...', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey)),
+                  Text('Rilevamento posizione GPS in corso...', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey)),
                 ],
               ),
             )
