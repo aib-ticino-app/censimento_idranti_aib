@@ -1578,11 +1578,11 @@ aKA(a){var s=!1
 if($.bj().gdm()===B.aQ||$.bj().gdm()===B.c2)if(a!=null)s=a===".SF Pro Text"||a===".SF Pro Display"||a===".SF UI Text"||a===".SF UI Display"
 return s},
 aS4(){if(A.aTo())return B.qz
-if($.bj().gdm()===B.aQ||$.bj().gdm()===B.c2)return B.MM
+if($.bj().gdm()===B.aQ||$.bj().gdm()===B.c2)return B.MN
 throw A.f(A.af("Should only be called on Mac or iOS."))},
 b65(){if(A.aTo())return B.qz
 if($.bj().gdm()===B.aQ||$.bj().gdm()===B.c2)return A.aS4()
-return B.MJ},
+return B.MK},
 aSY(a,b){var s,r,q,p,o=new A.cb("")
 A.aSA(a,o)
 if(!A.aKB(a)&&!A.aKA(a)){s=b==null
@@ -12480,7 +12480,7 @@ break
 case 4:s=l.a
 s===$&&A.a()
 s=A.bE(s,200)
-r=A.bE(A.a83(l,B.qC,B.MO),24)
+r=A.bE(A.a83(l,B.qC,B.MP),24)
 q=A.bE(A.a83(l,B.qC,B.Nw),32)
 p=A.bE(l.a,10)
 o=A.bE(l.a,12)
@@ -34340,7 +34340,7 @@ if(e.b){q=t.f
 d=q.a(q.a(B.cm.hy(a2)).h(0,"data"))
 c=A.bX(d.h(0,"message"))
 if(c!=null&&c.length!==0){b=A.aIT(d,"assertiveness")
-e.a.a_m(c,B.MK[b==null?0:b])}}a.fN(a3,B.cm.ce(!0))
+e.a.a_m(c,B.ML[b==null?0:b])}}a.fN(a3,B.cm.ce(!0))
 return
 case"flutter/navigation":q=a.gdg().b
 p=t.e8
@@ -48061,7 +48061,7 @@ $0(){return this.a.e=this.b},
 $S:0}
 A.axj.prototype={
 $1(a){var s=null,r=this.b,q=A.bp("Vuoi eliminare la voce "+r.b+" ("+r.d+")?",s,s,s,s,s,s)
-return A.ut(A.b([A.l8(B.jv,new A.axh(a),s),A.a94(B.a0k,new A.axi(this.a,a,r),A.BC(s,s,B.eg,s,s,s,s,s,s,B.j,s,s,s,s,s,s,s,s,s,s))],t.p),q,B.a0r)},
+return A.ut(A.b([A.l8(B.jv,new A.axh(a),s),A.a94(B.a0k,new A.axi(this.a,a,r),A.BC(s,s,B.eg,s,s,s,s,s,s,B.j,s,s,s,s,s,s,s,s,s,s))],t.p),q,B.a0s)},
 $S:93}
 A.axh.prototype={
 $0(){return A.cV(this.a,!1).d0()},
@@ -48098,7 +48098,7 @@ if(j.length!==0)B.b.N(k,A.b([B.cF,A.bp("Ultima modifica: "+j,p,p,p,B.Cr,p,p)],m)
 k=A.x6(A.jf(k,B.aV,B.S,B.b6),p,B.ab)
 j=A.kr(p,p,p,B.KC,p,p,new A.axn(o,n),p,p,p,"Condividi su WhatsApp")
 i=A.l8(B.nc,new A.axo(a),p)
-return A.ut(A.b([j,new A.FZ(!0,new A.axp(o,n),p,p,p,p,B.A,p,!1,p,!0,p,new A.a1b(B.a0t,B.Kv,p,p,p),p),i,A.a95(B.q8,B.a0A,new A.axq(o,a,n),A.BC(p,p,n.e==="Non Funzionante"?B.cq:B.kF,p,p,p,p,p,p,B.j,p,p,p,p,p,p,p,p,p,p))],m),k,l)},
+return A.ut(A.b([j,new A.FZ(!0,new A.axp(o,n),p,p,p,p,B.A,p,!1,p,!0,p,new A.a1b(B.a0u,B.Kv,p,p,p),p),i,A.a95(B.q8,B.a0A,new A.axq(o,a,n),A.BC(p,p,n.e==="Non Funzionante"?B.cq:B.kF,p,p,p,p,p,p,B.j,p,p,p,p,p,p,p,p,p,p))],m),k,l)},
 $S:93}
 A.axn.prototype={
 $0(){return this.a.rq(this.b)},
@@ -48208,7 +48208,7 @@ n=n.y
 n=n==null?p:n.h(0,"ruolo")
 q=t.p
 n=A.jf(A.b([m,B.cF,s,B.cF,r,B.cF,A.bp("\u2b50 Ruolo: "+A.j(n==null?o:n),p,p,p,B.Xn,p,p)],q),B.aV,B.S,B.b6)
-return A.ut(A.b([A.l8(B.nc,new A.ay4(a),p),A.a95(B.Kh,B.a0o,new A.ay5(a),A.BC(p,p,B.cq,p,p,p,p,p,p,B.j,p,p,p,p,p,p,p,p,p,p))],q),n,B.a0s)},
+return A.ut(A.b([A.l8(B.nc,new A.ay4(a),p),A.a95(B.Kh,B.a0p,new A.ay5(a),A.BC(p,p,B.cq,p,p,p,p,p,p,B.j,p,p,p,p,p,p,p,p,p,p))],q),n,B.a0t)},
 $S:93}
 A.ay4.prototype={
 $0(){A.cV(this.a,!1).oE(null)
@@ -48313,7 +48313,7 @@ B.b.N(l,new A.a6(j,new A.ay_(i,b),A.a1(j).i("a6<1,e>")))
 l.push(A.hr(k.dx,B.qg,!1))
 l=A.x6(A.jf(l,B.aV,B.S,B.b6),n,B.ab)
 j=o.d
-return A.ut(A.b([A.l8(B.jv,new A.ay0(j),n),A.a94(B.Cw,new A.ay1(m,k,i,j),n)],s),l,B.a0m)},
+return A.ut(A.b([A.l8(B.jv,new A.ay0(j),n),A.a94(B.Cw,new A.ay1(m,k,i,j),n)],s),l,B.a0n)},
 $S:123}
 A.axU.prototype={
 $1(a){var s=null
@@ -106781,9 +106781,9 @@ B.Qi=new A.cF([50,B.H0,100,B.GM,200,B.H7,300,B.H3,400,B.GA,500,B.Gz,600,B.Hm,700
 B.iF=new A.kJ(B.Qi,1,0.3764705882352941,0.49019607843137253,0.5450980392156862,B.e)
 B.af=new A.hc(700)
 B.Zf=new A.n(!0,B.iF,null,null,null,null,null,B.af,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null)
-B.a0w=new A.ck("Rilevamento posizione GPS a Bolladello...",null,B.Zf,null,null,null,null,null,null)
-B.MT=s([B.Ga,B.BX,B.a0w],t.p)
-B.HV=new A.qc(B.ab,B.iz,B.an,B.a1,null,B.ch,null,0,B.MT,null)
+B.a0l=new A.ck("Rilevamento posizione GPS in corso...",null,B.Zf,null,null,null,null,null,null)
+B.MI=s([B.Ga,B.BX,B.a0l],t.p)
+B.HV=new A.qc(B.ab,B.iz,B.an,B.a1,null,B.ch,null,0,B.MI,null)
 B.G0=new A.nB(B.W,null,null,B.HV,null)
 B.G1=new A.is(0,"close")
 B.os=new A.is(1,"error")
@@ -107503,9 +107503,9 @@ B.nD=new A.Js(0,"named")
 B.D8=new A.Js(1,"anonymous")
 B.Mq=s([B.nD,B.D8],A.av("K<Js>"))
 B.Ne=s([0.41233895,0.35762064,0.18051042],t.n)
-B.MQ=s([0.2126,0.7152,0.0722],t.n)
+B.MR=s([0.2126,0.7152,0.0722],t.n)
 B.Od=s([0.01932141,0.11916382,0.95034478],t.n)
-B.Ms=s([B.Ne,B.MQ,B.Od],t.zg)
+B.Ms=s([B.Ne,B.MR,B.Od],t.zg)
 B.qx=s([0,4,12,1,5,13,3,7,15],t.t)
 B.Mw=s([65533],t.t)
 B.a2S=new A.hw(0,1)
@@ -107531,19 +107531,19 @@ B.N_=s([2,1.13276676],t.n)
 B.LU=s([2.18349805,1.20311921],t.n)
 B.NT=s([2.33888662,1.28698796],t.n)
 B.NV=s([2.48660575,1.36351941],t.n)
-B.ML=s([2.62226596,1.44717976],t.n)
-B.MS=s([2.7514899,1.53385819],t.n)
+B.MM=s([2.62226596,1.44717976],t.n)
+B.MT=s([2.7514899,1.53385819],t.n)
 B.Nq=s([3.36298265,1.98288283],t.n)
 B.N3=s([4.08649929,2.23811846],t.n)
 B.Ng=s([4.85481134,2.47563463],t.n)
-B.MP=s([5.62945551,2.72948597],t.n)
+B.MQ=s([5.62945551,2.72948597],t.n)
 B.N0=s([6.43023796,2.98020421],t.n)
-B.qy=s([B.N_,B.LU,B.NT,B.NV,B.ML,B.MS,B.Nq,B.N3,B.Ng,B.MP,B.N0],t.zg)
-B.MJ=s(["Arial"],t.s)
-B.MK=s([B.kc,B.kd],A.av("K<A8>"))
-B.MM=s(["-apple-system","BlinkMacSystemFont"],t.s)
+B.qy=s([B.N_,B.LU,B.NT,B.NV,B.MM,B.MT,B.Nq,B.N3,B.Ng,B.MQ,B.N0],t.zg)
+B.MK=s(["Arial"],t.s)
+B.ML=s([B.kc,B.kd],A.av("K<A8>"))
+B.MN=s(["-apple-system","BlinkMacSystemFont"],t.s)
 B.qz=s(["BlinkMacSystemFont"],t.s)
-B.MO=s([18,15,10,12,15,18,15,12,12],t.n)
+B.MP=s([18,15,10,12,15,18,15,12,12],t.n)
 B.bv=new A.lh(0,"label")
 B.ba=new A.lh(1,"avatar")
 B.ci=new A.lh(2,"deleteIcon")
@@ -107647,8 +107647,8 @@ B.NW=s([B.Ee],t.F)
 B.fw=s([B.d0,B.cj,B.ho,B.hp,B.ka],t.QP)
 B.Mz=s([0.001200833568784504,0.002389694492170889,0.0002795742885861124],t.n)
 B.NB=s([0.0005891086651375999,0.0029785502573438758,0.0003270666104008398],t.n)
-B.MN=s([0.00010146692491640572,0.0005364214359186694,0.0032979401770712076],t.n)
-B.O6=s([B.Mz,B.NB,B.MN],t.zg)
+B.MO=s([0.00010146692491640572,0.0005364214359186694,0.0032979401770712076],t.n)
+B.O6=s([B.Mz,B.NB,B.MO],t.zg)
 B.O7=s([45,95,45,20,45,90,45,45,45],t.n)
 B.O8=s([120,120,20,45,20,15,20,120,120],t.n)
 B.AT=new A.ab(0,0)
@@ -107782,7 +107782,7 @@ B.E2=new A.by(-1,B.Q,B.c5,B.cA,5)
 B.x2=new A.h(0,6)
 B.Ep=new A.by(0,B.Q,B.c6,B.x2,10)
 B.Ex=new A.by(0,B.Q,B.bW,B.ce,18)
-B.MR=s([B.E2,B.Ep,B.Ex],t.F)
+B.MS=s([B.E2,B.Ep,B.Ex],t.F)
 B.mj=new A.h(0,5)
 B.E7=new A.by(-3,B.Q,B.c5,B.mj,5)
 B.mk=new A.h(0,8)
@@ -107811,7 +107811,7 @@ B.R6=new A.h(0,24)
 B.Et=new A.by(3,B.Q,B.c6,B.R6,38)
 B.Em=new A.by(8,B.Q,B.bW,B.x3,46)
 B.Nc=s([B.E9,B.Et,B.Em],t.F)
-B.PY=new A.cF([0,B.qJ,1,B.O2,2,B.MH,3,B.NX,4,B.LT,6,B.MR,8,B.Me,9,B.Mv,12,B.MZ,16,B.MY,24,B.Nc],A.av("cF<m,R<by>>"))
+B.PY=new A.cF([0,B.qJ,1,B.O2,2,B.MH,3,B.NX,4,B.LT,6,B.MS,8,B.Me,9,B.Mv,12,B.MZ,16,B.MY,24,B.Nc],A.av("cF<m,R<by>>"))
 B.cc=new A.i(4294968065)
 B.mO=new A.ak(B.cc,!1,!1,!0,!1,B.n)
 B.bZ=new A.i(4294968066)
@@ -108358,7 +108358,7 @@ B.Ob=s([B.wu,null,null,B.fI],t.L)
 B.O_=s([B.wv,null,null,B.dn],t.L)
 B.Mu=s([B.ww,null,null,B.m5],t.L)
 B.LR=s([B.wx,null,null,B.dp],t.L)
-B.MI=s([B.wy,null,null,B.fJ],t.L)
+B.MJ=s([B.wy,null,null,B.fJ],t.L)
 B.NS=s([B.wz,null,null,B.dq],t.L)
 B.NU=s([B.wA,null,null,B.fK],t.L)
 B.MA=s([B.fF,B.fF,B.iv,null],t.L)
@@ -108378,7 +108378,7 @@ B.MC=s([B.fG,B.fG,B.iw,null],t.L)
 B.N9=s([B.fB,null,null,B.fI],t.L)
 B.NC=s([B.fC,null,null,B.fK],t.L)
 B.MD=s([B.cT,B.cT,B.dk,null],t.L)
-B.Qd=new A.cF(["*",B.Mo,"+",B.NR,"-",B.MX,".",B.No,"/",B.LM,"0",B.O4,"1",B.O0,"2",B.My,"3",B.Ob,"4",B.O_,"5",B.Mu,"6",B.LR,"7",B.MI,"8",B.NS,"9",B.NU,"Alt",B.MA,"AltGraph",B.O5,"ArrowDown",B.N4,"ArrowLeft",B.N5,"ArrowRight",B.N6,"ArrowUp",B.O9,"Clear",B.NY,"Control",B.MB,"Delete",B.Nx,"End",B.N7,"Enter",B.Mt,"Home",B.N8,"Insert",B.NZ,"Meta",B.MC,"PageDown",B.N9,"PageUp",B.NC,"Shift",B.MD],A.av("cF<l,R<i?>>"))
+B.Qd=new A.cF(["*",B.Mo,"+",B.NR,"-",B.MX,".",B.No,"/",B.LM,"0",B.O4,"1",B.O0,"2",B.My,"3",B.Ob,"4",B.O_,"5",B.Mu,"6",B.LR,"7",B.MJ,"8",B.NS,"9",B.NU,"Alt",B.MA,"AltGraph",B.O5,"ArrowDown",B.N4,"ArrowLeft",B.N5,"ArrowRight",B.N6,"ArrowUp",B.O9,"Clear",B.NY,"Control",B.MB,"Delete",B.Nx,"End",B.N7,"Enter",B.Mt,"Home",B.N8,"Insert",B.NZ,"Meta",B.MC,"PageDown",B.N9,"PageUp",B.NC,"Shift",B.MD],A.av("cF<l,R<i?>>"))
 B.QT={KeyA:0,KeyB:1,KeyC:2,KeyD:3,KeyE:4,KeyF:5,KeyG:6,KeyH:7,KeyI:8,KeyJ:9,KeyK:10,KeyL:11,KeyM:12,KeyN:13,KeyO:14,KeyP:15,KeyQ:16,KeyR:17,KeyS:18,KeyT:19,KeyU:20,KeyV:21,KeyW:22,KeyX:23,KeyY:24,KeyZ:25,Digit1:26,Digit2:27,Digit3:28,Digit4:29,Digit5:30,Digit6:31,Digit7:32,Digit8:33,Digit9:34,Digit0:35,Minus:36,Equal:37,BracketLeft:38,BracketRight:39,Backslash:40,Semicolon:41,Quote:42,Backquote:43,Comma:44,Period:45,Slash:46}
 B.wS=new A.bU(B.QT,["a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z","1","2","3","4","5","6","7","8","9","0","-","=","[","]","\\",";","'","`",",",".","/"],t.li)
 B.QS={"zh-Hant":0,"zh-TW":1,"zh-MO":2,"zh-HK":3,ja:4,ko:5,zh:6,"zh-Hans":7,"zh-CN":8}
@@ -108824,12 +108824,12 @@ B.fU=new A.wp(0,"none")
 B.SI=new A.wp(1,"scroll")
 B.SJ=new A.wp(3,"scale")
 B.SK=new A.wp(4,"unknown")
-B.a0p=new A.ck("Da Verificare",null,null,null,null,null,null,null,null)
-B.SL=new A.rE("Da Verificare",B.a0p,null,t.wI)
-B.a0n=new A.ck("Funzionante",null,null,null,null,null,null,null,null)
-B.SM=new A.rE("Funzionante",B.a0n,null,t.wI)
-B.a0l=new A.ck("Non Funzionante",null,null,null,null,null,null,null,null)
-B.SN=new A.rE("Non Funzionante",B.a0l,null,t.wI)
+B.a0q=new A.ck("Da Verificare",null,null,null,null,null,null,null,null)
+B.SL=new A.rE("Da Verificare",B.a0q,null,t.wI)
+B.a0o=new A.ck("Funzionante",null,null,null,null,null,null,null,null)
+B.SM=new A.rE("Funzionante",B.a0o,null,t.wI)
+B.a0m=new A.ck("Non Funzionante",null,null,null,null,null,null,null,null)
+B.SN=new A.rE("Non Funzionante",B.a0m,null,t.wI)
 B.SO=new A.wu(null,null,null,null,null,null,null,null,null,null,null,null,null)
 B.SP=new A.wv("Something went wrong while getting current position")
 B.He=new A.q(1,0.9607843137254902,0.9607843137254902,0.9607843137254902,B.e)
@@ -108839,11 +108839,11 @@ B.iH=new A.kJ(B.Q3,1,0.6196078431372549,0.6196078431372549,0.6196078431372549,B.
 B.nb=new A.n(!0,B.iH,null,null,null,null,8,B.af,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null)
 B.a0g=new A.ck("S",null,B.nb,null,null,null,null,null,null)
 B.SQ=new A.fO(null,null,null,4,null,null,B.a0g,null)
-B.a0v=new A.ck("W",null,B.nb,null,null,null,null,null,null)
-B.SR=new A.fO(5,null,null,null,null,null,B.a0v,null)
+B.a0w=new A.ck("W",null,B.nb,null,null,null,null,null,null)
+B.SR=new A.fO(5,null,null,null,null,null,B.a0w,null)
 B.a_k=new A.n(!0,B.eg,null,null,null,null,8,B.af,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null)
-B.a0u=new A.ck("N",null,B.a_k,null,null,null,null,null,null)
-B.SS=new A.fO(null,4,null,null,null,null,B.a0u,null)
+B.a0v=new A.ck("N",null,B.a_k,null,null,null,null,null,null)
+B.SS=new A.fO(null,4,null,null,null,null,B.a0v,null)
 B.a0z=new A.ck("E",null,B.nb,null,null,null,null,null,null)
 B.ST=new A.fO(null,null,5,null,null,null,B.a0z,null)
 B.mr=new A.rH(0,"platformDefault")
@@ -108915,8 +108915,8 @@ B.ex=new A.i3(null,null)
 B.Ke=new A.cu(983712,"MaterialIcons",!1)
 B.Ky=new A.cG(B.Ke,28,B.eg,null,null)
 B.eA=new A.dS(8,null,null,null)
-B.a0q=new A.ck("Punto Non Funzionante",null,null,null,null,null,null,null,null)
-B.Jz=new A.lR(1,B.lC,B.a0q,null)
+B.a0r=new A.ck("Punto Non Funzionante",null,null,null,null,null,null,null,null)
+B.Jz=new A.lR(1,B.lC,B.a0r,null)
 B.N2=s([B.Ky,B.eA,B.Jz],t.p)
 B.TG=new A.EK(B.aI,B.S,B.an,B.a1,null,B.ch,null,0,B.N2,null)
 B.TH=new A.EM(1333)
@@ -109572,12 +109572,12 @@ B.Cu=new A.ck("UNI 70",null,null,null,null,null,null,null,null)
 B.a0i=new A.ck("Naviga Comunque",null,null,null,null,null,null,null,null)
 B.a0j=new A.ck("Idrante",null,null,null,null,null,null,null,null)
 B.a0k=new A.ck("Elimina",null,null,null,null,null,null,null,null)
-B.a0m=new A.ck("Nuovo Idrante",null,null,null,null,null,null,null,null)
-B.a0o=new A.ck("Disconnetti",null,null,null,null,null,null,null,null)
+B.a0n=new A.ck("Nuovo Idrante",null,null,null,null,null,null,null,null)
+B.a0p=new A.ck("Disconnetti",null,null,null,null,null,null,null,null)
 B.jv=new A.ck("Annulla",null,null,null,null,null,null,null,null)
-B.a0r=new A.ck("Conferma Eliminazione",null,null,null,null,null,null,null,null)
-B.a0s=new A.ck("Profilo Operatore AIB",null,null,null,null,null,null,null,null)
-B.a0t=new A.ck("Modifica",null,null,null,null,null,null,null,null)
+B.a0s=new A.ck("Conferma Eliminazione",null,null,null,null,null,null,null,null)
+B.a0t=new A.ck("Profilo Operatore AIB",null,null,null,null,null,null,null,null)
+B.a0u=new A.ck("Modifica",null,null,null,null,null,null,null,null)
 B.Cv=new A.ck("Portata d'Acqua:",null,B.na,null,null,null,null,null,null)
 B.Cw=new A.ck("Salva",null,null,null,null,null,null,null,null)
 B.Cx=new A.ck("Mezzi Compatibili:",null,B.na,null,null,null,null,null,null)
